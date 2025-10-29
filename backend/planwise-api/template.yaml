@@ -2,40 +2,164 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   planwise-api
+  SAM Template for Event Management API
 
-  Sample SAM Template for planwise-api
-
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 3
+    Runtime: python3.13
+    Architectures:
+      - x86_64
+    Timeout: 30
+    Environment:
+      Variables:
+        EVENTS_TABLE: events-table
+        AWS_ENDPOINT_URL: !Ref DynamoDBEndpoint
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      AllowOrigin: "'*'"
+
+Parameters:
+  DynamoDBEndpoint:
+    Type: String
+    Default: ""
+    Description: "DynamoDB endpoint URL for local development (leave empty for AWS)"
 
 Resources:
-  HelloWorldFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+  # DynamoDB Table for Events
+  EventsTable:
+    Type: AWS::DynamoDB::Table
     Properties:
-      CodeUri: hello_world/
-      Handler: app.lambda_handler
-      Runtime: python3.13
-      Architectures:
-        - x86_64
+      TableName: events-table
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: calendar_id
+          AttributeType: N
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: calendar_id-index
+          KeySchema:
+            - AttributeName: calendar_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # Create Event Function
+  CreateEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/events/
+      Handler: create_event.lambda_handler
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventsTable
       Events:
-        HelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+        CreateEvent:
+          Type: Api
           Properties:
-            Path: /hello
+            Path: /events
+            Method: post
+
+  # Get Event Function
+  GetEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/events/
+      Handler: get_event.lambda_handler
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EventsTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /events/{id}
             Method: get
 
+  # Get Events by Calendar Function
+  GetEventsByCalendarFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/events/
+      Handler: get_events_by_calendar.lambda_handler
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EventsTable
+      Events:
+        GetEventsByCalendar:
+          Type: Api
+          Properties:
+            Path: /calendars/{calendar_id}/events
+            Method: get
+
+  # Update Event Function
+  UpdateEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/events/
+      Handler: update_event.lambda_handler
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventsTable
+      Events:
+        UpdateEvent:
+          Type: Api
+          Properties:
+            Path: /events/{id}
+            Method: put
+
+  # Delete Event Function
+  DeleteEventFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/events/
+      Handler: delete_event.lambda_handler
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventsTable
+      Events:
+        DeleteEvent:
+          Type: Api
+          Properties:
+            Path: /events/{id}
+            Method: delete
+
+  # Lambda Layer for shared dependencies (pydantic, models)
+  DependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: planwise-dependencies
+      Description: Shared dependencies including Pydantic and models
+      ContentUri: layers/dependencies/python
+      CompatibleRuntimes:
+        - python3.13
+    Metadata:
+      BuildMethod: python3.13
+
 Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/hello/"
-  HelloWorldFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+  ApiEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+  
+  EventsTableName:
+    Description: "DynamoDB table name for events"
+    Value: !Ref EventsTable
+  
+  CreateEventFunctionArn:
+    Description: "Create Event Lambda Function ARN"
+    Value: !GetAtt CreateEventFunction.Arn
