@@ -1,5 +1,5 @@
-from shared.models.event import Event
-from shared.utils.db import get_table
+from layers.dependencies.python.shared.models import Event
+from layers.dependencies.python.shared.utils.db import get_table
 import json
 from pydantic import ValidationError
 
