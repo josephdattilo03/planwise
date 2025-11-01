@@ -1,0 +1,42 @@
+[tool.bandit]
+exclude_dirs = ["/tests", "/node_modules", "/frontend", "/mobile"]
+skips = ["B101"]
+
+[tool.mypy]
+# Require type annotations
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+check_untyped_defs = true
+
+# Strict optional checking
+strict_optional = true
+
+# Warn about issues
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+
+# Error on missing type stubs
+disallow_any_generics = true
+
+# Other strictness
+no_implicit_optional = true
+strict_equality = true
+
+# Ignore missing imports for third-party libraries without stubs
+ignore_missing_imports = true
+
+# Show error codes
+show_error_codes = true
+pretty = true
+
+# Exclude patterns
+exclude = [
+    "^node_modules/",
+    "^frontend/",
+    "^mobile/",
+    "\\.venv/",
+    "^tests/"
+]
