@@ -143,9 +143,9 @@ Resources:
   DependenciesLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
-      LayerName: planwise-dependencies
+      LayerName: planwise-api-dependencies
       Description: Shared dependencies including Pydantic and models
-      ContentUri: layers/dependencies/python
+      ContentUri: layers/planwise-api-dependencies/python/layers/dependencies/python
       CompatibleRuntimes:
         - python3.13
     Metadata:

@@ -1,4 +1,10 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:pipenv",
-    "python-envs.pythonProjects": []
+    "python-envs.pythonProjects": [],
+    "python.analysis.extraPaths": [
+        "./backend/planwise-api/layers/planwise-api-dependencies/python/layers/dependencies/python"
+    ],
+    "python.autoComplete.extraPaths": [
+        "./backend/planwise-api/layers/planwise-api-dependencies/python/layers/dependencies/python"
+    ]
 }

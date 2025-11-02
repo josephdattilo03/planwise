@@ -25,8 +25,8 @@ class Recurrence(BaseModel):
 
 
 class Event(BaseModel):
-    id: int
-    calendar_id: int
+    id: str
+    calendar_id: str
     start_time: date
     end_time: date
     event_color: str

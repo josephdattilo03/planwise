@@ -3,9 +3,9 @@ import json
 from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
 from aws_lambda_typing.responses import APIGatewayProxyResponseV2
-from layers.dependencies.python.shared.models import Event
-from layers.dependencies.python.shared.utils.db import get_table
 from pydantic import ValidationError
+from shared.models.event import Event
+from shared.utils.db import get_dynamodb_client, get_table
 
 
 def lambda_handler(
