@@ -7,7 +7,7 @@ from shared.utils.db import get_table
 def lambda_handler(event, context):
     try:
         calendar_table = get_table("calendar-table")
-        event_table = get_table("event-table")
+        events_table = get_table("events-table")
 
 
         # Extract calendar ID from path parameters
@@ -26,11 +26,11 @@ def lambda_handler(event, context):
         }
 
         while True:
-            events_response = event_table.scan(**scan_params)
+            events_response = events_table.scan(**scan_params)
             
             # Delete each matching event
             for item in events_response.get("Items", []):
-                event_table.delete_item(Key={"id": item["id"]})
+                events_table.delete_item(Key={"id": item["id"]})
                 deleted_events += 1
             
             # Check if there are more items to scan
