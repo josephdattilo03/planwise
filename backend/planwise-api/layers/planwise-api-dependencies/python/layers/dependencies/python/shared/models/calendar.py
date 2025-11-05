@@ -3,4 +3,6 @@ from pydantic import BaseModel
 
 
 class Calendar(BaseModel):
-    pass
+    id: str
+    name: str
+    calendar_color: str
