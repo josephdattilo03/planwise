@@ -4,25 +4,28 @@ from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
 from aws_lambda_typing.responses import APIGatewayProxyResponseV2
 from pydantic import ValidationError
-from shared.models.event import Event
-from shared.utils.db import get_dynamodb_client, get_table
+from shared.models.calendar import Calendar
+from shared.utils.db import get_table
 
 
 def lambda_handler(
     event: lambda_events.APIGatewayProxyEventV2, context: lambda_context.Context
 ) -> APIGatewayProxyResponseV2:
     try:
-        table = get_table("calendar-table")
+        table = get_table("calendars-table")
         body = json.loads(event["body"])
 
-        calendar_data = Event(**body)
+        calendar_data = Calendar(**body)
         item = calendar_data.model_dump(mode="json")
         table.put_item(Item=item)
 
         return {
             "statusCode": 200,
             "body": json.dumps(
-                {"message": "Event created successfully", "calendar_id": calendar_data.id}
+                {
+                    "message": "Calendar created successfully",
+                    "calendar_id": calendar_data.id,
+                }
             ),
         }
     except ValidationError as e:

@@ -52,6 +52,7 @@ repos:
       - id: check-yaml
         files: \.ya?ml$
         exclude: template\.yaml$  # Exclude CloudFormation/SAM templates
+        args: ['--unsafe']
       - id: check-added-large-files
         args: ['--maxkb=1000']
       - id: check-merge-conflict

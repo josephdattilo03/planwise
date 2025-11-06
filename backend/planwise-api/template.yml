@@ -48,6 +48,17 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
+  CalendarsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: calendars-table
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
 
   # Create Event Function
   CreateEventFunction:
@@ -85,24 +96,6 @@ Resources:
             Path: /events/{id}
             Method: get
 
-  # Get Events by Calendar Function
-  GetEventsByCalendarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/events/
-      Handler: get_events_by_calendar.lambda_handler
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref EventsTable
-      Events:
-        GetEventsByCalendar:
-          Type: Api
-          Properties:
-            Path: /calendars/{calendar_id}/events
-            Method: get
-
   # Update Event Function
   UpdateEventFunction:
     Type: AWS::Serverless::Function
@@ -137,6 +130,78 @@ Resources:
           Type: Api
           Properties:
             Path: /events/{id}
+            Method: delete
+  
+  # Create Calendar Function
+  CreateCalendarFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/calendar/
+      Handler: create_calendar.lambda_handler
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CalendarsTable
+      Events:
+        CreateCalendar:
+          Type: Api
+          Properties:
+            Path: /calendars
+            Method: post
+  
+  # Get Calendar Function
+  GetCalendarFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/calendar/
+      Handler: get_calendar.lambda_handler
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CalendarsTable
+      Events:
+        GetCalendar:
+          Type: Api
+          Properties:
+            Path: /calendars/{id}
+            Method: get
+  
+  # Update Calendar Function
+  UpdateCalendarFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/calendar/
+      Handler: update_calendar.lambda_handler
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CalendarsTable
+      Events:
+        UpdateCalendar:
+          Type: Api
+          Properties:
+            Path: /calendars/{id}
+            Method: put
+
+  # Delete Calendar Function
+  DeleteCalendarFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/calendar/
+      Handler: create_calendar.lambda_handler
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CalendarsTable
+      Events:
+        DeleteCalendar:
+          Type: Api
+          Properties:
+            Path: /calendars/{id}
             Method: delete
 
   # Lambda Layer for shared dependencies (pydantic, models)
