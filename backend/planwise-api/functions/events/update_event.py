@@ -1,87 +1,83 @@
 import json
 
+from aws_lambda_typing import context as lambda_context
+from aws_lambda_typing import events as lambda_events
+from aws_lambda_typing.responses import APIGatewayProxyResponseV2
 from botocore.exceptions import ClientError
-from shared.utils.db import get_table
+from pydantic import ValidationError
+from shared.models.event import Event
+from shared.services.events_service import EventsService
 
 
-def lambda_handler(event, context):
+def lambda_handler(
+    event: lambda_events.APIGatewayProxyEventV2,
+    context: lambda_context.Context,
+) -> APIGatewayProxyResponseV2:
+    service = EventsService()
+
     try:
-        table = get_table("events-table")
-
-        # Extract event ID from path parameters
-        event_id = event["pathParameters"]["id"]
-
-        # Parse request body
-        body = json.loads(event["body"])
-
-        # Check if event exists
-        response = table.get_item(Key={"id": event_id})
-        if "Item" not in response:
-            return {"statusCode": 404, "body": json.dumps({"error": "Event not found"})}
-
-        # Build update expression dynamically
-        update_expression = "SET "
-        expression_attribute_values = {}
-        expression_attribute_names = {}
-
-        # List of updatable fields (exclude id since it's the key)
-        updatable_fields = [
-            "calendar_id",
-            "start_time",
-            "end_time",
-            "event_color",
-            "is_all_day",
-            "description",
-            "location",
-            "timezone",
-            "recurrence",
-        ]
-
-        update_parts = []
-        for field in updatable_fields:
-            if field in body:
-                # Use expression attribute names to handle reserved keywords
-                attr_name = f"#{field}"
-                attr_value = f":{field}"
-                expression_attribute_names[attr_name] = field
-                expression_attribute_values[attr_value] = body[field]
-                update_parts.append(f"{attr_name} = {attr_value}")
-
-        if not update_parts:
+        path_params = event.get("pathParameters")
+        if not path_params or "id" not in path_params:
             return {
                 "statusCode": 400,
-                "body": json.dumps({"error": "No valid fields to update"}),
+                "body": json.dumps({"error": "Missing event ID in path parameters"}),
             }
 
-        update_expression += ", ".join(update_parts)
+        event_id = path_params["id"]
 
-        # Update the item
-        updated_response = table.update_item(
-            Key={"id": event_id},
-            UpdateExpression=update_expression,
-            ExpressionAttributeNames=expression_attribute_names,
-            ExpressionAttributeValues=expression_attribute_values,
-            ReturnValues="ALL_NEW",
-        )
+        if not event.get("body"):
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"error": "Missing request body"}),
+            }
+
+        body = json.loads(event["body"])
+
+        existing_event = service.get_event(event_id)
+        if not existing_event:
+            return {
+                "statusCode": 404,
+                "body": json.dumps({"error": "Event not found"}),
+            }
+
+        updated_data = existing_event.model_dump()
+        updated_data.update(body)
+        updated_data["id"] = event_id
+
+        updated_event = Event(**updated_data)
+
+        service.update_event(updated_event)
 
         return {
             "statusCode": 200,
             "body": json.dumps(
                 {
                     "message": "Event updated successfully",
-                    "event": updated_response["Attributes"],
+                    "event": updated_event.model_dump(mode="json"),
                 }
             ),
         }
-    except KeyError:
+
+    except ValidationError as e:
         return {
             "statusCode": 400,
-            "body": json.dumps({"error": "Missing event ID in path parameters"}),
+            "body": json.dumps({"error": e.errors()}),
         }
-    except json.JSONDecodeError:
+
+    except ValueError as e:
         return {
             "statusCode": 400,
-            "body": json.dumps({"error": "Invalid JSON in request body"}),
+            "body": json.dumps({"error": str(e)}),
         }
+
     except ClientError as e:
-        return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": e.response["Error"]["Message"]}),
+        }
+
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": f"Internal server error: {str(e)}"}),
+        }

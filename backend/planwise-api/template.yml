@@ -131,6 +131,26 @@ Resources:
           Properties:
             Path: /events/{id}
             Method: delete
+
+  # Get Event by Date Range
+  GetDateRangeEvents:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/calendar
+      Handler: get_calendar_events_by_date_range.lambda_handler
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EventsTable
+      Events:
+        GetDateRangeEvents:
+          Type: Api
+          Properties:
+            Path: /calendars/{calendar_id}/events
+            Method: get
+
+
   
   # Create Calendar Function
   CreateCalendarFunction:
