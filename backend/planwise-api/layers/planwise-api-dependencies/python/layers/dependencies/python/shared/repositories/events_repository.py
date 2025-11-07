@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from utils.db import get_table
 
@@ -25,6 +25,17 @@ class EventsRepository:
             return "Attributes" in response
         except Exception:
             return False
+
+    def find_by_calendar_id(self, calendar_id: str) -> List[dict[str, Any]]:
+        try:
+            response = self.table.scan(
+                FilterExpression="calendar_id = :cal_id",
+                ExpressionAttributeValues={":cal_id": calendar_id},
+            )
+            items = response.get("Items", [])
+            return items if isinstance(items, list) else []
+        except Exception:
+            return []
 
     # def query_by_calendar_and_time_range(
     #     self,

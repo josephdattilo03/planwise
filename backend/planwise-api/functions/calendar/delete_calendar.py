@@ -4,49 +4,51 @@ from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
 from aws_lambda_typing.responses import APIGatewayProxyResponseV2
 from botocore.exceptions import ClientError
-from shared.utils.db import get_table
+from shared.services.calendar_service import CalendarService
+from shared.services.events_service import EventsService
 
 
 def lambda_handler(
     event: lambda_events.APIGatewayProxyEventV2, context: lambda_context.Context
 ) -> APIGatewayProxyResponseV2:
+    calendar_service = CalendarService()
+    event_service = EventsService()
+
     try:
-        calendar_table = get_table("calendars-table")
-        events_table = get_table("events-table")
-
         # Extract calendar ID from path parameters
-        calendar_id = event["pathParameters"]["id"]
+        path_params = event.get("pathParameters")
+        if not path_params or "id" not in path_params:
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"error": "Missing calendar ID in path parameters"}),
+            }
 
-        # Check if ca;emdar exists before deleting
-        response = calendar_table.get_item(Key={"id": calendar_id})
-        if "Item" not in response:
+        calendar_id = path_params["id"]
+
+        # Check if calendar exists
+        calendar = calendar_service.get_calendar(calendar_id)
+        if calendar is None:
             return {
                 "statusCode": 404,
                 "body": json.dumps({"error": "Calendar not found"}),
             }
 
-        # Delete events in that calendar
+        # Delete all events associated with this calendar
         deleted_events = 0
-        scan_params = {
-            "FilterExpression": "calendar_id = :cal_id",
-            "ExpressionAttributeValues": {":cal_id": calendar_id},
-        }
-
-        while True:
-            events_response = events_table.scan(**scan_params)
-
-            # Delete each matching event
-            for item in events_response.get("Items", []):
-                events_table.delete_item(Key={"id": item["id"]})
-                deleted_events += 1
-
-            # Check if there are more items to scan
-            if "LastEvaluatedKey" not in events_response:
-                break
-            scan_params["ExclusiveStartKey"] = events_response["LastEvaluatedKey"]
+        events = event_service.repository.find_by_calendar_id(calendar_id)
+        for event_item in events:
+            if "id" in event_item:
+                deleted = event_service.delete_event(event_item["id"])
+                if deleted:
+                    deleted_events += 1
 
         # Delete the calendar
-        calendar_table.delete_item(Key={"id": calendar_id})
+        deleted_calendar = calendar_service.delete_calendar(calendar_id)
+        if not deleted_calendar:
+            return {
+                "statusCode": 500,
+                "body": json.dumps({"error": "Failed to delete calendar"}),
+            }
 
         return {
             "statusCode": 200,
@@ -58,10 +60,15 @@ def lambda_handler(
                 }
             ),
         }
-    except KeyError:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"error": "Missing calendar ID in path parameters"}),
-        }
+
     except ClientError as e:
-        return {"statusCode": 500, "body": json.dumps({"error": str(e)})}
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": str(e)}),
+        }
+
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": f"Internal server error: {str(e)}"}),
+        }
