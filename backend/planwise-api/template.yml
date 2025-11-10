@@ -27,6 +27,20 @@ Parameters:
     Description: "DynamoDB endpoint URL for local development (leave empty for AWS)"
 
 Resources:
+  # Lambda Layer for shared dependencies (pydantic, models)
+  # MOVED TO TOP to build first
+  DependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: planwise-api-dependencies
+      Description: Shared dependencies including Pydantic and models
+      ContentUri: layers/dependencies
+      CompatibleRuntimes:
+        - python3.13
+      RetentionPolicy: Delete
+    Metadata:
+      BuildMethod: makefile
+
   # DynamoDB Table for Events
   EventsTable:
     Type: AWS::DynamoDB::Table
@@ -48,6 +62,7 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
+            
   CalendarsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -150,8 +165,6 @@ Resources:
             Path: /calendars/{calendar_id}/events
             Method: get
 
-
-  
   # Create Calendar Function
   CreateCalendarFunction:
     Type: AWS::Serverless::Function
@@ -211,7 +224,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: functions/calendar/
-      Handler: create_calendar.lambda_handler
+      Handler: delete_calendar.lambda_handler
       Layers:
         - !Ref DependenciesLayer
       Policies:
@@ -223,18 +236,6 @@ Resources:
           Properties:
             Path: /calendars/{id}
             Method: delete
-
-  # Lambda Layer for shared dependencies (pydantic, models)
-  DependenciesLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      LayerName: planwise-api-dependencies
-      Description: Shared dependencies including Pydantic and models
-      ContentUri: layers/planwise-api-dependencies/python/layers/dependencies/python
-      CompatibleRuntimes:
-        - python3.13
-    Metadata:
-      BuildMethod: python3.13
 
 Outputs:
   ApiEndpoint:

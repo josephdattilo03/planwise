@@ -1,6 +1,6 @@
 from typing import Any, List, Optional
 
-from utils.db import get_table
+from shared.utils.db import get_table
 
 
 class EventsRepository:

@@ -1,7 +1,7 @@
 from typing import Any, Optional
 
-from models.event import Event
-from repositories.events_repository import EventsRepository
+from shared.models.event import Event
+from shared.repositories.events_repository import EventsRepository
 
 
 class EventsService:
@@ -15,7 +15,7 @@ class EventsService:
 
         event_dict = event.model_dump()
 
-        if event_dict.get("recurrence"):
+        if event.recurrence is not None:
             event_dict["recurrence"] = event.recurrence.model_dump()
 
         self.repository.save(event_dict)
@@ -35,7 +35,7 @@ class EventsService:
 
         event_dict = event.model_dump()
 
-        if event_dict.get("recurrence"):
+        if event.recurrence is not None:
             event_dict["recurrence"] = event.recurrence.model_dump()
 
         self.repository.save(event_dict)
@@ -47,7 +47,7 @@ class EventsService:
 
     def _item_to_event(self, item: dict[str, Any]) -> Event:
         try:
-            event = Event.model_validate(item)
+            event = Event(**item)
         except Exception as e:
             raise ValueError(f"Invalid event data from DynamoDB: {e}")
 
