@@ -1,4 +1,10 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:system",
     "python-envs.pythonProjects": [],
+    "python.analysis.extraPaths": [
+        "./backend/planwise-api/layers/dependencies/python"
+    ],
+    "python.autoComplete.extraPaths": [
+        "./backend/planwise-api/layers/dependencies/python"
+    ]
 }
