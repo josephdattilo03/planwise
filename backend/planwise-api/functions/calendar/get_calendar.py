@@ -1,5 +1,4 @@
 import json
-from typing import Any
 
 from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
@@ -23,10 +22,9 @@ def lambda_handler(
 
         calendar_id = path_params["id"]
 
-        # Fetch calendar
-        calendar: dict[str, Any] | None = service.find_by_id(calendar_id)
+        calendar_obj = service.get_calendar(calendar_id)
 
-        if calendar is None:
+        if not calendar_obj:
             return {
                 "statusCode": 404,
                 "body": json.dumps({"error": "Calendar not found"}),
@@ -34,11 +32,17 @@ def lambda_handler(
 
         return {
             "statusCode": 200,
-            "body": json.dumps(calendar),
+            "body": json.dumps(calendar_obj.model_dump(mode="json")),
         }
 
     except ClientError as e:
         return {
             "statusCode": 500,
             "body": json.dumps({"error": str(e)}),
+        }
+
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": f"Internal server error: {str(e)}"}),
         }

@@ -1,7 +1,7 @@
 from typing import Any, Optional
 
-from models.calendar import Calendar
-from repositories.calendar_repository import CalendarRepository
+from shared.models.calendar import Calendar
+from shared.repositories.calendar_repository import CalendarRepository
 
 
 class CalendarService:
@@ -32,7 +32,7 @@ class CalendarService:
 
     def _item_to_calendar(self, item: dict[str, Any]) -> Calendar:
         try:
-            calendar = Calendar.model_validate(item)
+            calendar = Calendar(**item)
         except Exception as e:
             raise ValueError(f"Invalid calendar data from DynamoDB: {e}")
         return calendar
