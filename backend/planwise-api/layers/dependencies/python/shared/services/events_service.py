@@ -14,10 +14,10 @@ class EventsService:
         if event.start_time > event.end_time:
             raise ValueError("Start time must be before end time")
 
-        event_dict = event.model_dump()
+        event_dict = event.model_dump(mode="json")
 
         if event.recurrence is not None:
-            event_dict["recurrence"] = event.recurrence.model_dump()
+            event_dict["recurrence"] = event.recurrence.model_dump(mode="json")
 
         self.repository.save(event_dict)
         return event
