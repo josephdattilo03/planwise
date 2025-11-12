@@ -1,4 +1,5 @@
-from typing import Any, Optional
+from datetime import date
+from typing import Any, List, Optional
 
 from shared.models.event import Event
 from shared.repositories.events_repository import EventsRepository
@@ -44,6 +45,14 @@ class EventsService:
     def delete_event(self, event_id: str) -> bool:
         result: bool = self.repository.delete(event_id)
         return result
+
+    def get_events_from_date_range(
+        self, calendar_id: str, start: date, end: date
+    ) -> List[Event]:
+        result = self.repository.query_calendar_events_by_daterange(
+            calendar_id, start, end
+        )
+        return [self._item_to_event(item) for item in result]
 
     def _item_to_event(self, item: dict[str, Any]) -> Event:
         try:

@@ -1,5 +1,7 @@
+from datetime import date
 from typing import Any, List, Optional
 
+from boto3.dynamodb.conditions import Key
 from shared.utils.db import get_table
 
 
@@ -37,21 +39,24 @@ class EventsRepository:
         except Exception:
             return []
 
-    # def query_by_calendar_and_time_range(
-    #     self,
-    #     calendar_id: str,
-    #     start_date: str,
-    #     end_date: str
-    # ) -> List[dict]:
-    #     response = self.table.query(
-    #         IndexName='calendar_id-start_time-index',
-    #         KeyConditionExpression='calendar_id = :cal_id
-    # AND start_time <= :end_date',
-    #         FilterExpression='end_time >= :start_date',
-    #         ExpressionAttributeValues={
-    #             ':cal_id': calendar_id,
-    #             ':start_date': start_date,
-    #             ':end_date': end_date
-    #         }
-    #     )
-    #     return response.get('Items', [])
+    def query_calendar_events_by_daterange(
+        self, calendar_id: str, start: date, end: date
+    ) -> List[dict[str, Any]]:
+        table = get_table("events-table")
+
+        start_bucket = f"{calendar_id}#{start.strftime('%Y:%m')}"
+        end_bucket = f"{calendar_id}#{end.strftime('%Y:%m')}"
+        buckets = {start_bucket, end_bucket}
+
+        events: List[dict[str, Any]] = []
+        for bucket in buckets:
+            response = table.query(
+                KeyConditionExpression=Key("calendar_bucket").eq(bucket)
+            )
+            events.extend(
+                e
+                for e in response["Items"]
+                if e["end_time"] >= start.isoformat()
+                and e["start_time"] <= end.isoformat()
+            )
+        return events

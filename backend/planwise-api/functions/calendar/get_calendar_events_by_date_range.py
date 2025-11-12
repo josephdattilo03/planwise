@@ -3,60 +3,82 @@ from datetime import date
 
 from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
-from aws_lambda_typing import responses as lambda_response
-from shared.models.event import Event, Recurrence
-from shared.utils.db import get_table
+from aws_lambda_typing.responses import APIGatewayProxyResponseV2
+from pydantic import ValidationError
+from shared.services.events_service import EventsService
 
 
 def lambda_handler(
     event: lambda_events.APIGatewayProxyEventV2, context: lambda_context.Context
-) -> lambda_response.APIGatewayProxyResponseV2:
-    table = get_table("events-table")
+) -> APIGatewayProxyResponseV2:
+    service = EventsService()
 
-    path_params = event.get("pathParameters", {})
-    calendar_id = path_params.get("calendar_id")
-    query_params = event.get("queryStringParameters", {})
-    if not (start_date := query_params.get("start_date")) or not (
-        end_date := query_params.get("end_date")
-    ):
+    try:
+        path_params = event.get("pathParameters", {}) or {}
+        calendar_id = path_params.get("calendar_id")
+        query_params = event.get("queryStringParameters", {}) or {}
+
+        if not calendar_id:
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"error": "Missing calendar_id in path"}),
+            }
+
+        start_str = query_params.get("start_date")
+        end_str = query_params.get("end_date")
+
+        if not start_str or not end_str:
+            return {
+                "statusCode": 400,
+                "body": json.dumps(
+                    {
+                        "error": "start_date & end_date query parameters are required",
+                        "example": (
+                            f"/calendars/{calendar_id}/events?"
+                            "start_date=2025-11-01&end_date=2025-11-30"
+                        ),
+                    }
+                ),
+            }
+
+        try:
+            start_date = date.fromisoformat(start_str)
+            end_date = date.fromisoformat(end_str)
+        except ValueError:
+            return {
+                "statusCode": 400,
+                "body": json.dumps(
+                    {"error": "Dates must be in ISO format (YYYY-MM-DD)"}
+                ),
+            }
+
+        events = service.get_events_from_date_range(calendar_id, start_date, end_date)
+
         return {
-            "statusCode": 400,
+            "statusCode": 200,
             "body": json.dumps(
                 {
-                    "error": "start_date and end_date query parameters are required",
-                    "example": """/calendars/cal_123/events?start_
-                    date=2025-11-01&end_date=2025-11-30""",
-                }
+                    "message": f"Retrieved {len(events)} events",
+                    "events": [e.model_dump() for e in events],
+                },
+                default=str,  # Handles date serialization
             ),
         }
 
-    # Query using the GSI with start_time as range key
-    response = table.query(
-        IndexName="calendar_id-start_time-index",
-        KeyConditionExpression="calendar_id = :cal_id AND start_time <= :end_date",
-        FilterExpression="end_time >= :start_date",
-        ExpressionAttributeValues={
-            ":cal_id": calendar_id,
-            ":start_date": start_date.isoformat(),
-            ":end_date": end_date.isoformat(),
-        },
-    )
+    except ValidationError as e:
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"error": e.errors()}),
+        }
 
-    # Convert response items to Event objects
-    events = []
-    for item in response.get("Items", []):
-        # Convert date strings back to date objects
-        item["start_time"] = date.fromisoformat(item["start_time"])
-        item["end_time"] = date.fromisoformat(item["end_time"])
+    except ValueError as e:
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"error": str(e)}),
+        }
 
-        # Handle recurrence if present
-        if item.get("recurrence"):
-            rec = item["recurrence"]
-            rec["date_until"] = date.fromisoformat(rec["date_until"])
-            if rec.get("date_start"):
-                rec["date_start"] = date.fromisoformat(rec["date_start"])
-            item["recurrence"] = Recurrence(**rec)
-
-        events.append(Event(**item))
-
-    return events
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": f"Internal server error: {str(e)}"}),
+        }
