@@ -1,13 +1,7 @@
-# Please use pydantic model validation
 from datetime import date
-from typing import List, Literal, Optional, Self
+from typing import List, Literal, Optional
 
-from pydantic import (
-    BaseModel,
-    FieldSerializationInfo,
-    field_serializer,
-    model_validator,
-)
+from pydantic import BaseModel, FieldSerializationInfo, field_serializer
 
 
 class Recurrence(BaseModel):
@@ -31,7 +25,6 @@ class Recurrence(BaseModel):
 
 class Event(BaseModel):
     id: str
-    calendar_bucket: Optional[str] = None
     calendar_id: str
     start_time: date
     end_time: date
@@ -40,21 +33,7 @@ class Event(BaseModel):
     description: str
     location: str
     timezone: str
-    recurrence: Optional[Recurrence]
-
-    @model_validator(mode="after")
-    def create_calendar_bucket(self) -> Self:
-        if self.calendar_bucket is not None:
-            return self
-
-        if self.calendar_id is None or self.start_time is None:
-            raise ValueError("Missing calendar_id and start_time")
-
-        yyyy_mm = self.start_time.strftime("%Y_%m")
-        print(yyyy_mm)
-
-        self.calendar_bucket = f"{self.calendar_id}#{yyyy_mm}"
-        return self
+    recurrence: Optional[Recurrence] = None
 
     @field_serializer("start_time", "end_time")
     def serialize_date(

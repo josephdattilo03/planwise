@@ -1,12 +1,11 @@
 from datetime import date
 from typing import Any, List, Optional
 
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr, Key
 from shared.utils.db import get_table
 
 
 class EventsRepository:
-
     def __init__(self) -> None:
         self.table = get_table("events-table")
 
@@ -30,33 +29,57 @@ class EventsRepository:
 
     def find_by_calendar_id(self, calendar_id: str) -> List[dict[str, Any]]:
         try:
-            response = self.table.scan(
-                FilterExpression="calendar_id = :cal_id",
-                ExpressionAttributeValues={":cal_id": calendar_id},
+            response = self.table.query(
+                IndexName="calendar_id-start_time-index",
+                KeyConditionExpression=Key("calendar_id").eq(calendar_id),
             )
-            items = response.get("Items", [])
-            return items if isinstance(items, list) else []
+
+            items: List[dict[str, Any]] = response.get("Items", [])
+
+            while "LastEvaluatedKey" in response:
+                response = self.table.query(
+                    IndexName="calendar_id-start_time-index",
+                    KeyConditionExpression=Key("calendar_id").eq(calendar_id),
+                    ExclusiveStartKey=response["LastEvaluatedKey"],
+                )
+                items.extend(response.get("Items", []))
+
+            return items
         except Exception:
             return []
 
     def query_calendar_events_by_daterange(
         self, calendar_id: str, start: date, end: date
     ) -> List[dict[str, Any]]:
-        table = get_table("events-table")
+        try:
+            query_start_iso = start.isoformat()
+            query_end_iso = end.isoformat()
 
-        start_bucket = f"{calendar_id}#{start.strftime('%Y:%m')}"
-        end_bucket = f"{calendar_id}#{end.strftime('%Y:%m')}"
-        buckets = {start_bucket, end_bucket}
+            response = self.table.query(
+                IndexName="calendar_id-start_time-index",
+                KeyConditionExpression=(
+                    Key("calendar_id").eq(calendar_id)
+                    & Key("start_time").lt(query_end_iso)
+                ),
+                FilterExpression=Attr("end_time").gt(query_start_iso),
+            )
 
-        events: List[dict[str, Any]] = []
-        for bucket in buckets:
-            response = table.query(
-                KeyConditionExpression=Key("calendar_bucket").eq(bucket)
-            )
-            events.extend(
-                e
-                for e in response["Items"]
-                if e["end_time"] >= start.isoformat()
-                and e["start_time"] <= end.isoformat()
-            )
-        return events
+            items = response.get("Items", [])
+
+            while "LastEvaluatedKey" in response:
+                response = self.table.query(
+                    IndexName="calendar_id-start_time-index",
+                    KeyConditionExpression=(
+                        Key("calendar_id").eq(calendar_id)
+                        & Key("start_time").lt(query_end_iso)
+                    ),
+                    FilterExpression=Attr("end_time").gt(query_start_iso),
+                    ExclusiveStartKey=response["LastEvaluatedKey"],
+                )
+                items.extend(response.get("Items", []))
+
+            return items if isinstance(items, list) else []
+
+        except Exception as e:
+            print(f"Error querying events: {e}")
+            return []
