@@ -5,7 +5,7 @@ from aws_lambda_typing import events as lambda_events
 from aws_lambda_typing.responses import APIGatewayProxyResponseV2
 from botocore.exceptions import ClientError
 from shared.services.calendar_service import CalendarService
-from shared.services.events_service import EventsService
+from shared.services.event_service import EventsService
 
 
 def lambda_handler(

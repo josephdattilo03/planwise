@@ -1,13 +1,13 @@
 from typing import Any, Optional
 
 from shared.models.event import Event
-from shared.repositories.events_repository import EventsRepository
+from shared.repositories.event_repository import EventRepository
 
 
-class EventsService:
+class EventService:
 
     def __init__(self) -> None:
-        self.repository = EventsRepository()
+        self.repository = EventRepository()
 
     def create_event(self, event: Event) -> Event:
         if event.start_time > event.end_time:

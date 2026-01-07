@@ -6,14 +6,14 @@ from aws_lambda_typing.responses import APIGatewayProxyResponseV2
 from botocore.exceptions import ClientError
 from pydantic import ValidationError
 from shared.models.event import Event
-from shared.services.events_service import EventsService
+from shared.services.event_service import EventService
 
 
 def lambda_handler(
     event: lambda_events.APIGatewayProxyEventV2,
     context: lambda_context.Context,
 ) -> APIGatewayProxyResponseV2:
-    service = EventsService()
+    service = EventService()
 
     try:
         path_params = event.get("pathParameters")
