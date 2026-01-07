@@ -53,10 +53,10 @@ Resources:
   # --------------------------------------------------------------------------
   # DynamoDB Tables
   # --------------------------------------------------------------------------
-  EventsTable:
+  EventTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: events-table
+      TableName: event-table
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: id
@@ -102,7 +102,7 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref CalendarsTable
-      Events:
+      Event:
         CreateCalendar:
           Type: Api
           Properties:
@@ -122,7 +122,7 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref CalendarsTable
-      Events:
+      Event:
         GetCalendar:
           Type: Api
           Properties:
@@ -142,7 +142,7 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref CalendarsTable
-      Events:
+      Event:
         UpdateCalendar:
           Type: Api
           Properties:
@@ -162,31 +162,31 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref CalendarsTable
-      Events:
+      Event:
         DeleteCalendar:
           Type: Api
           Properties:
             Path: /calendars/{id}
             Method: delete
 
-  GetDateRangeEvents:
+  GetDateRangeEvent:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: functions/calendar
-      Handler: get_calendar_events_by_date_range.lambda_handler
+      Handler: get_calendar_event_by_date_range.lambda_handler
       Environment:
         Variables:
-          EVENTS_TABLE: !Ref EventsTable
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref EventsTable
-      Events:
-        GetDateRangeEvents:
+            TableName: !Ref EventTable
+      Event:
+        GetDateRangeEvent:
           Type: Api
           Properties:
-            Path: /calendars/{calendar_id}/events
+            Path: /calendars/{calendar_id}/event
             Method: get
 
   # --------------------------------------------------------------------------
@@ -195,81 +195,81 @@ Resources:
   CreateEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/events/
+      CodeUri: functions/event/
       Handler: create_event.lambda_handler
       Environment:
         Variables:
-          EVENTS_TABLE: !Ref EventsTable
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
-      Events:
+            TableName: !Ref EventTable
+      Event:
         CreateEvent:
           Type: Api
           Properties:
-            Path: /events
+            Path: /event
             Method: post
 
   GetEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/events/
+      CodeUri: functions/event/
       Handler: get_event.lambda_handler
       Environment:
         Variables:
-          EVENTS_TABLE: !Ref EventsTable
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref EventsTable
-      Events:
+            TableName: !Ref EventTable
+      Event:
         GetEvent:
           Type: Api
           Properties:
-            Path: /events/{id}
+            Path: /event/{id}
             Method: get
 
   UpdateEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/events/
+      CodeUri: functions/event/
       Handler: update_event.lambda_handler
       Environment:
         Variables:
-          EVENTS_TABLE: !Ref EventsTable
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
-      Events:
+            TableName: !Ref EventTable
+      Event:
         UpdateEvent:
           Type: Api
           Properties:
-            Path: /events/{id}
+            Path: /event/{id}
             Method: put
 
   DeleteEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/events/
+      CodeUri: functions/event/
       Handler: delete_event.lambda_handler
       Environment:
         Variables:
-          EVENTS_TABLE: !Ref EventsTable
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
-      Events:
+            TableName: !Ref EventTable
+      Event:
         DeleteEvent:
           Type: Api
           Properties:
-            Path: /events/{id}
+            Path: /event/{id}
             Method: delete
 
 # ============================================================================
@@ -280,9 +280,9 @@ Outputs:
     Description: "API Gateway endpoint URL for Prod stage"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
 
-  EventsTableName:
-    Description: "DynamoDB table name for events"
-    Value: !Ref EventsTable
+  EventTableName:
+    Description: "DynamoDB table name for event"
+    Value: !Ref EventTable
 
   CalendarsTableName:
     Description: "DynamoDB table name for calendars"
