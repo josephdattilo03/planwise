@@ -4,41 +4,42 @@ from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
 from aws_lambda_typing.responses import APIGatewayProxyResponseV2
 from botocore.exceptions import ClientError
-from shared.services.calendar_service import CalendarService
+from shared.services.event_service import EventService
 
 
 def lambda_handler(
-    event: lambda_events.APIGatewayProxyEventV2, context: lambda_context.Context
+    event: lambda_events.APIGatewayProxyEventV2,
+    context: lambda_context.Context,
 ) -> APIGatewayProxyResponseV2:
-    service = CalendarService()
+    service = EventService()
 
     try:
         path_params = event.get("pathParameters")
         if not path_params or "id" not in path_params:
             return {
                 "statusCode": 400,
-                "body": json.dumps({"error": "Missing calendar ID in path parameters"}),
+                "body": json.dumps({"error": "Missing event ID in path parameters"}),
             }
 
-        calendar_id = path_params["id"]
+        event_id = path_params["id"]
 
-        calendar_obj = service.get_calendar(calendar_id)
+        event_obj = service.get_event(event_id)
 
-        if not calendar_obj:
+        if not event_obj:
             return {
                 "statusCode": 404,
-                "body": json.dumps({"error": "Calendar not found"}),
+                "body": json.dumps({"error": "Event not found"}),
             }
 
         return {
             "statusCode": 200,
-            "body": json.dumps(calendar_obj.model_dump(mode="json")),
+            "body": json.dumps(event_obj.model_dump(mode="json")),
         }
 
     except ClientError as e:
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": str(e)}),
+            "body": json.dumps({"error": e.response["Error"]["Message"]}),
         }
 
     except Exception as e:

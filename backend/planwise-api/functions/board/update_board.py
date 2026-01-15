@@ -5,27 +5,26 @@ from aws_lambda_typing import events as lambda_events
 from aws_lambda_typing.responses import APIGatewayProxyResponseV2
 from botocore.exceptions import ClientError
 from pydantic import ValidationError
-from shared.models.calendar import Calendar
-from shared.services.calendar_service import CalendarService
+from shared.models.event import Event
+from shared.services.event_service import EventService
 
 
 def lambda_handler(
-    event: lambda_events.APIGatewayProxyEventV2, context: lambda_context.Context
+    event: lambda_events.APIGatewayProxyEventV2,
+    context: lambda_context.Context,
 ) -> APIGatewayProxyResponseV2:
-    service = CalendarService()
+    service = EventService()
 
     try:
-        # Extract calendar ID from path parameters
         path_params = event.get("pathParameters")
         if not path_params or "id" not in path_params:
             return {
                 "statusCode": 400,
-                "body": json.dumps({"error": "Missing calendar ID in path parameters"}),
+                "body": json.dumps({"error": "Missing event ID in path parameters"}),
             }
 
-        calendar_id = path_params["id"]
+        event_id = path_params["id"]
 
-        # Parse body
         if not event.get("body"):
             return {
                 "statusCode": 400,
@@ -34,28 +33,27 @@ def lambda_handler(
 
         body = json.loads(event["body"])
 
-        # Fetch the existing calendar
-        existing_calendar = service.get_calendar(calendar_id)
-        if existing_calendar is None:
+        existing_event = service.get_event(event_id)
+        if not existing_event:
             return {
                 "statusCode": 404,
-                "body": json.dumps({"error": "Calendar not found"}),
+                "body": json.dumps({"error": "Event not found"}),
             }
 
-        # Merge updates with existing fields
-        updated_data = existing_calendar.model_dump()
+        updated_data = existing_event.model_dump()
         updated_data.update(body)
+        updated_data["id"] = event_id
 
-        # Validate and update
-        updated_calendar = Calendar(**updated_data)
-        saved_calendar = service.update_calendar(updated_calendar)
+        updated_event = Event(**updated_data)
+
+        service.update_event(updated_event)
 
         return {
             "statusCode": 200,
             "body": json.dumps(
                 {
-                    "message": "Calendar updated successfully",
-                    "calendar": saved_calendar.model_dump(mode="json"),
+                    "message": "Event updated successfully",
+                    "event": updated_event.model_dump(mode="json"),
                 }
             ),
         }
@@ -66,14 +64,20 @@ def lambda_handler(
             "body": json.dumps({"error": e.errors()}),
         }
 
-    except json.JSONDecodeError:
+    except ValueError as e:
         return {
             "statusCode": 400,
-            "body": json.dumps({"error": "Invalid JSON in request body"}),
+            "body": json.dumps({"error": str(e)}),
         }
 
     except ClientError as e:
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": str(e)}),
+            "body": json.dumps({"error": e.response["Error"]["Message"]}),
+        }
+
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": f"Internal server error: {str(e)}"}),
         }

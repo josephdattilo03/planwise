@@ -58,136 +58,20 @@ Resources:
     Properties:
       TableName: event-table
       BillingMode: PAY_PER_REQUEST
+
       AttributeDefinitions:
+        - AttributeName: board_id
+          AttributeType: S
         - AttributeName: id
           AttributeType: S
-        - AttributeName: calendar_id
-          AttributeType: N
+
       KeySchema:
-        - AttributeName: id
+        - AttributeName: board_id
           KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: calendar_id-index
-          KeySchema:
-            - AttributeName: calendar_id
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
-
-  CalendarsTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: calendars-table
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
         - AttributeName: id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
+          KeyType: RANGE
 
-  # --------------------------------------------------------------------------
-  # Calendar Functions
-  # --------------------------------------------------------------------------
-  CreateCalendarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar/
-      Handler: create_calendar.lambda_handler
-      Environment:
-        Variables:
-          CALENDARS_TABLE: !Ref CalendarsTable
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
-      Event:
-        CreateCalendar:
-          Type: Api
-          Properties:
-            Path: /calendars
-            Method: post
 
-  GetCalendarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar/
-      Handler: get_calendar.lambda_handler
-      Environment:
-        Variables:
-          CALENDARS_TABLE: !Ref CalendarsTable
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
-      Event:
-        GetCalendar:
-          Type: Api
-          Properties:
-            Path: /calendars/{id}
-            Method: get
-
-  UpdateCalendarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar/
-      Handler: update_calendar.lambda_handler
-      Environment:
-        Variables:
-          CALENDARS_TABLE: !Ref CalendarsTable
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
-      Event:
-        UpdateCalendar:
-          Type: Api
-          Properties:
-            Path: /calendars/{id}
-            Method: put
-
-  DeleteCalendarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar/
-      Handler: delete_calendar.lambda_handler
-      Environment:
-        Variables:
-          CALENDARS_TABLE: !Ref CalendarsTable
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
-      Event:
-        DeleteCalendar:
-          Type: Api
-          Properties:
-            Path: /calendars/{id}
-            Method: delete
-
-  GetDateRangeEvent:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar
-      Handler: get_calendar_event_by_date_range.lambda_handler
-      Environment:
-        Variables:
-          EVENT_TABLE: !Ref EventTable
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref EventTable
-      Event:
-        GetDateRangeEvent:
-          Type: Api
-          Properties:
-            Path: /calendars/{calendar_id}/event
-            Method: get
 
   # --------------------------------------------------------------------------
   # Event Functions
@@ -205,7 +89,7 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EventTable
-      Event:
+      Events:
         CreateEvent:
           Type: Api
           Properties:
@@ -225,7 +109,7 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref EventTable
-      Event:
+      Events:
         GetEvent:
           Type: Api
           Properties:
@@ -245,7 +129,7 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EventTable
-      Event:
+      Events:
         UpdateEvent:
           Type: Api
           Properties:
@@ -265,7 +149,7 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EventTable
-      Event:
+      Events:
         DeleteEvent:
           Type: Api
           Properties:
@@ -283,10 +167,6 @@ Outputs:
   EventTableName:
     Description: "DynamoDB table name for event"
     Value: !Ref EventTable
-
-  CalendarsTableName:
-    Description: "DynamoDB table name for calendars"
-    Value: !Ref CalendarsTable
 
   CreateEventFunctionArn:
     Description: "Create Event Lambda Function ARN"

@@ -15,7 +15,7 @@ class Recurrence(BaseModel):
     termination_date: date
     date_start: Optional[date] = None
 
-    @field_serializer("date_until", "date_start")
+    @field_serializer("termination_date", "date_start")
     def serialize_date(
         self, value: Optional[date], _info: FieldSerializationInfo
     ) -> Optional[str]:
