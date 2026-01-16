@@ -4,6 +4,18 @@ Description: >
   planwise-api
   SAM Template for Event Management API
 
+# ============================================================================
+# PARAMETERS
+# ============================================================================
+Parameters:
+  DynamoDBEndpoint:
+    Type: String
+    Default: ""
+    Description: "DynamoDB endpoint URL for local development (leave empty for AWS)"
+
+# ============================================================================
+# GLOBALS
+# ============================================================================
 Globals:
   Function:
     Runtime: python3.13
@@ -12,7 +24,6 @@ Globals:
     Timeout: 30
     Environment:
       Variables:
-        EVENTS_TABLE: events-table
         AWS_ENDPOINT_URL: !Ref DynamoDBEndpoint
   Api:
     Cors:
@@ -20,15 +31,13 @@ Globals:
       AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
       AllowOrigin: "'*'"
 
-Parameters:
-  DynamoDBEndpoint:
-    Type: String
-    Default: ""
-    Description: "DynamoDB endpoint URL for local development (leave empty for AWS)"
-
+# ============================================================================
+# RESOURCES
+# ============================================================================
 Resources:
-  # Lambda Layer for shared dependencies (pydantic, models)
-  # MOVED TO TOP to build first
+  # --------------------------------------------------------------------------
+  # Lambda Layers
+  # --------------------------------------------------------------------------
   DependenciesLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -41,211 +50,124 @@ Resources:
     Metadata:
       BuildMethod: makefile
 
-  # DynamoDB Table for Events
-  EventsTable:
+  # --------------------------------------------------------------------------
+  # DynamoDB Tables
+  # --------------------------------------------------------------------------
+  EventTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: events-table
+      TableName: event-table
       BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-        - AttributeName: calendar_id
-          AttributeType: N
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: calendar_id-index
-          KeySchema:
-            - AttributeName: calendar_id
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
-            
-  CalendarsTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: calendars-table
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
 
-  # Create Event Function
+      AttributeDefinitions:
+        - AttributeName: board_id
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+
+      KeySchema:
+        - AttributeName: board_id
+          KeyType: HASH
+        - AttributeName: id
+          KeyType: RANGE
+
+
+
+  # --------------------------------------------------------------------------
+  # Event Functions
+  # --------------------------------------------------------------------------
   CreateEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/events/
+      CodeUri: functions/event/
       Handler: create_event.lambda_handler
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
+            TableName: !Ref EventTable
       Events:
         CreateEvent:
           Type: Api
           Properties:
-            Path: /events
+            Path: /event
             Method: post
 
-  # Get Event Function
   GetEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/events/
+      CodeUri: functions/event/
       Handler: get_event.lambda_handler
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref EventsTable
+            TableName: !Ref EventTable
       Events:
         GetEvent:
           Type: Api
           Properties:
-            Path: /events/{id}
+            Path: /event/{id}
             Method: get
 
-  # Update Event Function
   UpdateEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/events/
+      CodeUri: functions/event/
       Handler: update_event.lambda_handler
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
+            TableName: !Ref EventTable
       Events:
         UpdateEvent:
           Type: Api
           Properties:
-            Path: /events/{id}
+            Path: /event/{id}
             Method: put
 
-  # Delete Event Function
   DeleteEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/events/
+      CodeUri: functions/event/
       Handler: delete_event.lambda_handler
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
+            TableName: !Ref EventTable
       Events:
         DeleteEvent:
           Type: Api
           Properties:
-            Path: /events/{id}
+            Path: /event/{id}
             Method: delete
 
-  # Get Event by Date Range
-  GetDateRangeEvents:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar
-      Handler: get_calendar_events_by_date_range.lambda_handler
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref EventsTable
-      Events:
-        GetDateRangeEvents:
-          Type: Api
-          Properties:
-            Path: /calendars/{calendar_id}/events
-            Method: get
-
-  # Create Calendar Function
-  CreateCalendarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar/
-      Handler: create_calendar.lambda_handler
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
-      Events:
-        CreateCalendar:
-          Type: Api
-          Properties:
-            Path: /calendars
-            Method: post
-  
-  # Get Calendar Function
-  GetCalendarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar/
-      Handler: get_calendar.lambda_handler
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
-      Events:
-        GetCalendar:
-          Type: Api
-          Properties:
-            Path: /calendars/{id}
-            Method: get
-  
-  # Update Calendar Function
-  UpdateCalendarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar/
-      Handler: update_calendar.lambda_handler
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
-      Events:
-        UpdateCalendar:
-          Type: Api
-          Properties:
-            Path: /calendars/{id}
-            Method: put
-
-  # Delete Calendar Function
-  DeleteCalendarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar/
-      Handler: delete_calendar.lambda_handler
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
-      Events:
-        DeleteCalendar:
-          Type: Api
-          Properties:
-            Path: /calendars/{id}
-            Method: delete
-
+# ============================================================================
+# OUTPUTS
+# ============================================================================
 Outputs:
   ApiEndpoint:
     Description: "API Gateway endpoint URL for Prod stage"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
-  
-  EventsTableName:
-    Description: "DynamoDB table name for events"
-    Value: !Ref EventsTable
-  
+
+  EventTableName:
+    Description: "DynamoDB table name for event"
+    Value: !Ref EventTable
+
   CreateEventFunctionArn:
     Description: "Create Event Lambda Function ARN"
     Value: !GetAtt CreateEventFunction.Arn

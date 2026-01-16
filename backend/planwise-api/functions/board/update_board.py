@@ -4,14 +4,16 @@ from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
 from aws_lambda_typing.responses import APIGatewayProxyResponseV2
 from botocore.exceptions import ClientError
-from shared.services.events_service import EventsService
+from pydantic import ValidationError
+from shared.models.event import Event
+from shared.services.event_service import EventService
 
 
 def lambda_handler(
     event: lambda_events.APIGatewayProxyEventV2,
     context: lambda_context.Context,
 ) -> APIGatewayProxyResponseV2:
-    service = EventsService()
+    service = EventService()
 
     try:
         path_params = event.get("pathParameters")
@@ -23,17 +25,49 @@ def lambda_handler(
 
         event_id = path_params["id"]
 
-        event_obj = service.get_event(event_id)
+        if not event.get("body"):
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"error": "Missing request body"}),
+            }
 
-        if not event_obj:
+        body = json.loads(event["body"])
+
+        existing_event = service.get_event(event_id)
+        if not existing_event:
             return {
                 "statusCode": 404,
                 "body": json.dumps({"error": "Event not found"}),
             }
 
+        updated_data = existing_event.model_dump()
+        updated_data.update(body)
+        updated_data["id"] = event_id
+
+        updated_event = Event(**updated_data)
+
+        service.update_event(updated_event)
+
         return {
             "statusCode": 200,
-            "body": json.dumps(event_obj.model_dump(mode="json")),
+            "body": json.dumps(
+                {
+                    "message": "Event updated successfully",
+                    "event": updated_event.model_dump(mode="json"),
+                }
+            ),
+        }
+
+    except ValidationError as e:
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"error": e.errors()}),
+        }
+
+    except ValueError as e:
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"error": str(e)}),
         }
 
     except ClientError as e:

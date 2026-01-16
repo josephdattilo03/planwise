@@ -4,36 +4,34 @@ from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
 from aws_lambda_typing.responses import APIGatewayProxyResponseV2
 from pydantic import ValidationError
-from shared.models.calendar import Calendar
-from shared.services.calendar_service import CalendarService
+from shared.models.board import Board 
+from shared.services.board_service import BoardService
 
 
 def lambda_handler(
     event: lambda_events.APIGatewayProxyEventV2, context: lambda_context.Context
 ) -> APIGatewayProxyResponseV2:
-    service = CalendarService()
+    service = BoardService()
 
     try:
-        # Ensure body exists
         if not event.get("body"):
             return {
                 "statusCode": 400,
                 "body": json.dumps({"error": "Missing request body"}),
             }
 
-        # Parse and validate input
         body = json.loads(event["body"])
-        calendar_obj = Calendar(**body)
 
-        # Create calendar in DB
-        service.create_calendar(calendar_obj)
+        board_obj = Board(**body)
+
+        service.create_board(board_obj)
 
         return {
             "statusCode": 201,
             "body": json.dumps(
                 {
-                    "message": "Calendar created successfully",
-                    "calendar_id": calendar_obj.id,
+                    "message": "Board created successfully",
+                    "event_id": board_obj.id,
                 }
             ),
         }

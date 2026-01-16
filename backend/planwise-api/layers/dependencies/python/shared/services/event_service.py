@@ -1,24 +1,27 @@
 from typing import Any, Optional
 
 from shared.models.event import Event
-from shared.repositories.events_repository import EventsRepository
+from shared.repositories.event_repository import EventRepository
+from shared.utils.errors import InvalidEventTimeError
 
 
-class EventsService:
+class EventService:
 
     def __init__(self) -> None:
-        self.repository = EventsRepository()
+        self.repository = EventRepository()
 
     def create_event(self, event: Event) -> Event:
         if event.start_time > event.end_time:
-            raise ValueError("Start time must be before end time")
+            raise InvalidEventTimeError()
 
         event_dict = event.model_dump()
 
         if event.recurrence is not None:
             event_dict["recurrence"] = event.recurrence.model_dump()
+        print("inserting into db")
 
         self.repository.save(event_dict)
+        print("completed insertion")
         return event
 
     def get_event(self, event_id: str) -> Optional[Event]:
@@ -31,7 +34,7 @@ class EventsService:
 
     def update_event(self, event: Event) -> Event:
         if event.start_time > event.end_time:
-            raise ValueError("Start time must be before end time")
+            raise InvalidEventTimeError()
 
         event_dict = event.model_dump()
 

@@ -1,11 +1,7 @@
+from shared.utils.db import get_table
 from typing import Any, Optional
 
-from shared.utils.db import get_table
-
-
-class CalendarRepository:
-    def __init__(self) -> None:
-        self.table = get_table("calendars-table")
+class Repository:
 
     def save(self, event_dict: dict[str, Any]) -> dict[str, Any]:
         self.table.put_item(Item=event_dict)
@@ -14,7 +10,7 @@ class CalendarRepository:
     def find_by_id(self, event_id: str) -> Optional[dict[str, Any]]:
         response = self.table.get_item(Key={"id": event_id})
         item = response.get("Item")
-        return item if isinstance(item, dict) else None
+        return item if isinstance(item, dict) else None 
 
     def delete(self, event_id: str) -> bool:
         try:
