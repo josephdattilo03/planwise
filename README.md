@@ -5,7 +5,7 @@
 Assignments for CRUD:
 Joe: Events (done mostly), Folders, Boards
 Ivesa: Tags, Tasks
-Brandon: User
+Brandon: Users, Notes
 
 Basic Workflow:
 1. create a service for adding removing updating and deleting your model
@@ -55,3 +55,7 @@ get files for current user at current tree depth
 
 Tasks:
 get tasks for specific board
+
+Notes:
+get notes for a user
+get notes for a board
