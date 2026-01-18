@@ -14,6 +14,10 @@ class InvalidEventTimeError(AppError):
     status_code = 400
     message = "Event start time must be before end time"
 
+class NoUpdatesProvidedError(AppError):
+    status_code = 400
+    message = "No updates provided"
+
 class NotFoundError(AppError):
     status_code = 404
 

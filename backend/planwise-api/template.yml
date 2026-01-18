@@ -20,7 +20,7 @@ Globals:
   Function:
     Runtime: python3.13
     Architectures:
-      - x86_64
+      - arm64
     Timeout: 30
     Environment:
       Variables:
@@ -46,9 +46,12 @@ Resources:
       ContentUri: layers/dependencies
       CompatibleRuntimes:
         - python3.13
+      CompatibleArchitectures: 
+      - arm64      
       RetentionPolicy: Delete
     Metadata:
       BuildMethod: makefile
+      BuildArchitecture: arm64
 
   # --------------------------------------------------------------------------
   # DynamoDB Tables
@@ -93,7 +96,7 @@ Resources:
         CreateEvent:
           Type: Api
           Properties:
-            Path: /event
+            Path: /board/event
             Method: post
 
   GetEventFunction:
@@ -113,7 +116,7 @@ Resources:
         GetEvent:
           Type: Api
           Properties:
-            Path: /event/{id}
+            Path: /board/{board_id}/event/{id}
             Method: get
 
   UpdateEventFunction:
@@ -133,7 +136,7 @@ Resources:
         UpdateEvent:
           Type: Api
           Properties:
-            Path: /event/{id}
+            Path: /board/{board_id}/event/{id}
             Method: put
 
   DeleteEventFunction:
@@ -153,7 +156,7 @@ Resources:
         DeleteEvent:
           Type: Api
           Properties:
-            Path: /event/{id}
+            Path: /board/{board_id}/event/{id}
             Method: delete
 
 # ============================================================================

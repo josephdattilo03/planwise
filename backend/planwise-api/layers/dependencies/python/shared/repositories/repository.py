@@ -1,5 +1,7 @@
 from shared.utils.db import get_table
 from typing import Any, Optional
+from shared.utils.errors import NotFoundError
+from shared.utils.errors import NoUpdatesProvidedError
 
 class Repository:
 
@@ -7,16 +9,36 @@ class Repository:
         self.table.put_item(Item=event_dict)
         return event_dict
 
-    def find_by_id(self, event_id: str) -> Optional[dict[str, Any]]:
-        response = self.table.get_item(Key={"id": event_id})
-        item = response.get("Item")
-        return item if isinstance(item, dict) else None 
+    def get_by_id_pair(self, pk: str, sk: str) -> Optional[dict[str, Any]]:
+        print(f"PK: {pk}")
+        print(f"SK: {sk}")
+        res = self.table.get_item(Key={
+            "PK": pk,
+            "SK": sk
+        })
+        print(res)
+        if "Item" not in res:
+            raise NotFoundError()
+        return res.get("Item")
+            
+    def delete_by_id_pair(self, pk: str, sk: str):
+        response = self.table.delete_item(Key={
+            "PK": pk,
+            "SK": sk
+        },
+        ReturnValues="ALL_OLD")
+        print(response)
+        if not response.get("Attributes"):
+            raise NotFoundError()
 
-    def delete(self, event_id: str) -> bool:
-        try:
-            response = self.table.delete_item(
-                Key={"id": event_id}, ReturnValues="ALL_OLD"
-            )
-            return "Attributes" in response
-        except Exception:
-            return False
+    def update_by_id_pair(self, update_object: dict[str, Any]) -> dict[str, Any]:
+        print("at the repository layer about to insert")
+        print(update_object)
+        self.table.put_item(
+            Item=update_object,
+            ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)"
+        )
+        return update_object
+            
+                
+

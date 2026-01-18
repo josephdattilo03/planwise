@@ -26,7 +26,6 @@ def lambda_handler(
 
     try:
         event_obj = Event(**body)
-        print("creating event")
         service.create_event(event_obj)
     except ValidationError as e:
         raise ValidationAppError(e.errors())

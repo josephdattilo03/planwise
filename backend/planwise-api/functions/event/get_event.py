@@ -13,17 +13,18 @@ def lambda_handler(
     context: lambda_context.Context,
 ) -> APIGatewayProxyResponseV2:
     service = EventService()
-
+    print("initialized the event service function")
     path_params = event.get("pathParameters")
-    if not path_params or "id" not in path_params:
+    print("here are the path params")
+    print(path_params)
+
+    if not path_params or "id" not in path_params or "board_id" not in path_params:
         raise BadRequestError()
 
-    event_id = path_params["id"]
-
-    event_obj = service.get_event(event_id)
-
-    if not event_obj:
-        raise NotFoundError()
+    event_id = path_params.get("id")
+    board_id = path_params.get("board_id")
+    print("about to get the event")
+    event_obj = service.get_event(event_id, board_id)
 
     return {
         "statusCode": 200,
