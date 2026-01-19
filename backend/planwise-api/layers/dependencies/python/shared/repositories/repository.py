@@ -1,13 +1,12 @@
 from shared.utils.db import get_table
 from typing import Any, Optional
 from shared.utils.errors import NotFoundError
-from shared.utils.errors import NoUpdatesProvidedError
 
 class Repository:
 
-    def save(self, event_dict: dict[str, Any]) -> dict[str, Any]:
-        self.table.put_item(Item=event_dict)
-        return event_dict
+    def save(self, save_dict: dict[str, Any]) -> dict[str, Any]:
+        self.table.put_item(Item=save_dict)
+        return save_dict
 
     def get_by_id_pair(self, pk: str, sk: str) -> Optional[dict[str, Any]]:
         print(f"PK: {pk}")

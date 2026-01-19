@@ -63,15 +63,33 @@ Resources:
       BillingMode: PAY_PER_REQUEST
 
       AttributeDefinitions:
-        - AttributeName: board_id
+        - AttributeName: PK
           AttributeType: S
-        - AttributeName: id
+        - AttributeName: SK
           AttributeType: S
 
       KeySchema:
-        - AttributeName: board_id
+        - AttributeName: PK
           KeyType: HASH
-        - AttributeName: id
+        - AttributeName: SK
+          KeyType: RANGE
+
+  FolderTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: folder-table
+      BillingMode: PAY_PER_REQUEST
+
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
           KeyType: RANGE
 
 
@@ -158,7 +176,89 @@ Resources:
           Properties:
             Path: /board/{board_id}/event/{id}
             Method: delete
+  # --------------------------------------------------------------------------
+  # Folder Functions 
+  # --------------------------------------------------------------------------
 
+  CreateFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: create_folder.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        CreateEvent:
+          Type: Api
+          Properties:
+            Path: /user/folder
+            Method: post
+
+  GetFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: get_folder.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder/{id}
+            Method: get
+
+  UpdateFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: update_folder.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable 
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FolderTable 
+      Events:
+        UpdateEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder/{id}
+            Method: put
+
+  DeleteFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: delete_folder.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable 
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        DeleteEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder/{id}
+            Method: delete
 # ============================================================================
 # OUTPUTS
 # ============================================================================

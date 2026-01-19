@@ -16,12 +16,9 @@ def lambda_handler(
     service = EventService()
 
     if not event.get("body"):
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"error": "Missing request body"}),
-        }
+        raise ValidationAppError()
 
-    body = json.loads(event["body"])
+    body = json.loads(event.get("body"))
 
 
     try:

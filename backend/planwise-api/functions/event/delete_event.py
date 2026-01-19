@@ -13,16 +13,13 @@ def lambda_handler(
     context: lambda_context.Context,
 ) -> APIGatewayProxyResponseV2:
     service = EventService()
-    print("starting with event service")
 
     path_params = event.get("pathParameters")
     if not path_params or "id" not in path_params or "board_id" not in path_params:
         raise BadRequestError()
 
     event_id = path_params.get("id")
-    print(f"id: {event_id}")
     board_id = path_params.get("board_id")
-    print(f"board_id: {board_id}")
 
     service.delete_event(event_id, board_id)
 

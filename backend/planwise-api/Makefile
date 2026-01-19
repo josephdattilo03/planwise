@@ -44,7 +44,19 @@ create-tables:
 		--endpoint-url $(AWS_ENDPOINT) \
 		--region $(AWS_REGION) \
 		2>/dev/null || echo "Table 'event-table' already exists"
-	@echo "Waiting for table to be active..."
+	@$(DUMMY_CREDS) aws dynamodb create-table \
+		--table-name folder-table \
+		--attribute-definitions \
+			AttributeName=PK,AttributeType=S \
+			AttributeName=SK,AttributeType=S \
+		--key-schema \
+			AttributeName=PK,KeyType=HASH \
+			AttributeName=SK,KeyType=RANGE \
+		--billing-mode PAY_PER_REQUEST \
+		--endpoint-url $(AWS_ENDPOINT) \
+		--region $(AWS_REGION) \
+		2>/dev/null || echo "Table 'folder-table' already exists"
+	@echo "Waiting for tables to be active..."
 	@sleep 2
 
 # ------------------------
