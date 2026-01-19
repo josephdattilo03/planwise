@@ -20,7 +20,7 @@ class Board(BaseModel):
     @computed_field
     @property
     def SK(self) -> str:
-        return f"PATH#{self.depth}#{self.path}"
+        return f"BOARD#{id}"
 
     @field_serializer("created_at")
     def serialize_date(

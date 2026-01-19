@@ -43,8 +43,8 @@ class Event(BaseModel):
     
     @computed_field
     @property
-    def PK(self) -> str: return f"BOARD#{self.id}"
+    def PK(self) -> str: return f"BOARD#{self.board_id}"
 
     @computed_field
     @property
-    def SK(self) -> str: return f"EVENT#{self.board_id}"
+    def SK(self) -> str: return f"EVENT#{self.id}"
