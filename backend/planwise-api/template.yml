@@ -92,6 +92,24 @@ Resources:
         - AttributeName: SK
           KeyType: RANGE
 
+  BoardTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: board-table
+      BillingMode: PAY_PER_REQUEST
+
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
 
 
   # --------------------------------------------------------------------------
@@ -258,6 +276,89 @@ Resources:
           Type: Api
           Properties:
             Path: /user/{user_id}/folder/{id}
+            Method: delete
+  # --------------------------------------------------------------------------
+  # Folder Functions 
+  # --------------------------------------------------------------------------
+
+  CreateBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: create_board.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable 
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        CreateEvent:
+          Type: Api
+          Properties:
+            Path: /user/board
+            Method: post
+
+  GetBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: get_board.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable 
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/board/{id}
+            Method: get
+
+  UpdateBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: update_board.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable 
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable 
+      Events:
+        UpdateEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/board/{id}
+            Method: put
+
+  DeleteBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: delete_board.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable 
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        DeleteEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/board/{id}
             Method: delete
 # ============================================================================
 # OUTPUTS
