@@ -1,6 +1,7 @@
 from shared.utils.db import get_table
-from typing import Any, Optional
+from typing import Any, Optional, List
 from shared.utils.errors import NotFoundError
+from boto3.dynamodb.conditions import Key
 
 class Repository:
 
@@ -9,13 +10,10 @@ class Repository:
         return save_dict
 
     def get_by_id_pair(self, pk: str, sk: str) -> Optional[dict[str, Any]]:
-        print(f"PK: {pk}")
-        print(f"SK: {sk}")
         res = self.table.get_item(Key={
             "PK": pk,
             "SK": sk
         })
-        print(res)
         if "Item" not in res:
             raise NotFoundError()
         return res.get("Item")
@@ -26,13 +24,16 @@ class Repository:
             "SK": sk
         },
         ReturnValues="ALL_OLD")
-        print(response)
         if not response.get("Attributes"):
             raise NotFoundError()
+    
+    def get_pk_list(self, pk: str) -> Optional[List[dict[str, Any]]]:
+        response = self.table.query(
+            KeyConditionExpression=Key('PK').eq(pk)
+        )
+        return response.get('Items', [])
 
     def update_by_id_pair(self, update_object: dict[str, Any]) -> dict[str, Any]:
-        print("at the repository layer about to insert")
-        print(update_object)
         self.table.put_item(
             Item=update_object,
             ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)"
