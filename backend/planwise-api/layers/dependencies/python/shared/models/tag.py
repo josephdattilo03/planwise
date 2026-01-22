@@ -12,3 +12,8 @@ class Tag(BaseModel):
     @property
     def PK(self) -> str:
         return f"USER#{self.user_id}"
+    
+    @computed_field
+    @property
+    def SK(self) -> str:
+        return f"TAG#{self.id}"

@@ -110,6 +110,42 @@ Resources:
         - AttributeName: SK
           KeyType: RANGE
 
+  TagTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: tag-table
+      BillingMode: PAY_PER_REQUEST
+
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
+  TaskTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: task-table
+      BillingMode: PAY_PER_REQUEST
+
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
 
 
   # --------------------------------------------------------------------------
@@ -401,6 +437,174 @@ Resources:
             Path: /user/{user_id}/board/
             Method: get
 
+
+  # --------------------------------------------------------------------------
+  # Tag Functions 
+  # --------------------------------------------------------------------------
+
+  CreateTagFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/tag/
+      Handler: create_tag.lambda_handler
+      Environment:
+        Variables:
+          TAG_TABLE: !Ref TagTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagTable
+      Events:
+        CreateTag:
+          Type: Api
+          Properties:
+            Path: /user/tag
+            Method: post
+
+  GetTagFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/tag/
+      Handler: get_tag.lambda_handler
+      Environment:
+        Variables:
+          TAG_TABLE: !Ref TagTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TagTable
+      Events:
+        GetTag:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/tag/{id}
+            Method: get
+
+  UpdateTagFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/tag/
+      Handler: update_tag.lambda_handler
+      Environment:
+        Variables:
+          TAG_TABLE: !Ref TagTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagTable
+      Events:
+        UpdateTag:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/tag/{id}
+            Method: put
+
+  DeleteTagFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/tag/
+      Handler: delete_tag.lambda_handler
+      Environment:
+        Variables:
+          TAG_TABLE: !Ref TagTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagTable
+      Events:
+        DeleteTag:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/tag/{id}
+            Method: delete
+
+  # --------------------------------------------------------------------------
+  # Task Functions 
+  # --------------------------------------------------------------------------
+
+  CreateTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/task/
+      Handler: create_task.lambda_handler
+      Environment:
+        Variables:
+          TASK_TABLE: !Ref TaskTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+      Events:
+        CreateTask:
+          Type: Api
+          Properties:
+            Path: /board/task
+            Method: post
+
+  GetTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/task/
+      Handler: get_task.lambda_handler
+      Environment:
+        Variables:
+          TASK_TABLE: !Ref TaskTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TaskTable
+      Events:
+        GetTask:
+          Type: Api
+          Properties:
+            Path: /board/{board_id}/task/{id}
+            Method: get
+
+  UpdateTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/task/
+      Handler: update_task.lambda_handler
+      Environment:
+        Variables:
+          TASK_TABLE: !Ref TaskTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+      Events:
+        UpdateTask:
+          Type: Api
+          Properties:
+            Path: /board/{board_id}/task/{id}
+            Method: put
+
+  DeleteTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/task/
+      Handler: delete_task.lambda_handler
+      Environment:
+        Variables:
+          TASK_TABLE: !Ref TaskTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+      Events:
+        DeleteTask:
+          Type: Api
+          Properties:
+            Path: /board/{board_id}/task/{id}
+            Method: delete
 # ============================================================================
 # OUTPUTS
 # ============================================================================
