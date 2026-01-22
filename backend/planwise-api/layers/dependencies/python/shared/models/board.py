@@ -19,3 +19,13 @@ class Board(BaseModel):
     @property
     def SK(self) -> str:
         return f"BOARD#{self.id}"
+
+    @computed_field
+    @property
+    def GSI1PK(self) -> str:
+        return f"USER#{self.user_id}"
+    
+    @computed_field
+    @property
+    def GSI1SK(self) -> str:
+        return f"DEPTH#{self.depth}#PATH#{self.path}"

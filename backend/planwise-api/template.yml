@@ -61,13 +61,11 @@ Resources:
     Properties:
       TableName: event-table
       BillingMode: PAY_PER_REQUEST
-
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
-
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
@@ -79,49 +77,69 @@ Resources:
     Properties:
       TableName: folder-table
       BillingMode: PAY_PER_REQUEST
-
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
-
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
 
   BoardTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: board-table
       BillingMode: PAY_PER_REQUEST
-
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
-
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
 
   TagTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: tag-table
       BillingMode: PAY_PER_REQUEST
-
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
-
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
@@ -133,20 +151,16 @@ Resources:
     Properties:
       TableName: task-table
       BillingMode: PAY_PER_REQUEST
-
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
-
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
-
-
 
   # --------------------------------------------------------------------------
   # Event Functions
@@ -333,6 +347,26 @@ Resources:
           Properties:
             Path: /user/{user_id}/folder/{id}
             Method: delete
+
+  GetFolderByDepthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: get_folder_by_depth.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder/{depth}/{path}
+            Method: get
   # --------------------------------------------------------------------------
   # Board Functions 
   # --------------------------------------------------------------------------

@@ -49,9 +49,13 @@ create-tables:
 		--attribute-definitions \
 			AttributeName=PK,AttributeType=S \
 			AttributeName=SK,AttributeType=S \
+			AttributeName=GSI1PK,AttributeType=S \
+			AttributeName=GSI1SK,AttributeType=S \
 		--key-schema \
 			AttributeName=PK,KeyType=HASH \
 			AttributeName=SK,KeyType=RANGE \
+		--global-secondary-indexes \
+			'[{"IndexName":"GSI1","KeySchema":[{"AttributeName":"GSI1PK","KeyType":"HASH"},{"AttributeName":"GSI1SK","KeyType":"RANGE"}],"Projection":{"ProjectionType":"ALL"}}]' \
 		--billing-mode PAY_PER_REQUEST \
 		--endpoint-url $(AWS_ENDPOINT) \
 		--region $(AWS_REGION) \
@@ -61,9 +65,13 @@ create-tables:
 		--attribute-definitions \
 			AttributeName=PK,AttributeType=S \
 			AttributeName=SK,AttributeType=S \
+			AttributeName=GSI1PK,AttributeType=S \
+			AttributeName=GSI1SK,AttributeType=S \
 		--key-schema \
 			AttributeName=PK,KeyType=HASH \
 			AttributeName=SK,KeyType=RANGE \
+		--global-secondary-indexes \
+			'[{"IndexName":"GSI1","KeySchema":[{"AttributeName":"GSI1PK","KeyType":"HASH"},{"AttributeName":"GSI1SK","KeyType":"RANGE"}],"Projection":{"ProjectionType":"ALL"}}]' \
 		--billing-mode PAY_PER_REQUEST \
 		--endpoint-url $(AWS_ENDPOINT) \
 		--region $(AWS_REGION) \
@@ -79,7 +87,7 @@ create-tables:
 		--billing-mode PAY_PER_REQUEST \
 		--endpoint-url $(AWS_ENDPOINT) \
 		--region $(AWS_REGION) \
-		2>/dev/null || echo "Table 'board-table' already exists"
+		2>/dev/null || echo "Table 'tag-table' already exists"
 	@$(DUMMY_CREDS) aws dynamodb create-table \
 		--table-name task-table \
 		--attribute-definitions \
@@ -91,7 +99,7 @@ create-tables:
 		--billing-mode PAY_PER_REQUEST \
 		--endpoint-url $(AWS_ENDPOINT) \
 		--region $(AWS_REGION) \
-		2>/dev/null || echo "Table 'board-table' already exists"
+		2>/dev/null || echo "Table 'task-table' already exists"
 	@echo "Waiting for tables to be active..."
 	@sleep 2
 
