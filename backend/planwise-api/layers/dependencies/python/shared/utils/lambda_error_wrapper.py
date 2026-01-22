@@ -12,10 +12,10 @@ def lambda_http_handler(fn):
         except AppError as e:
             return e.to_response()
 
-        except Exception:
+        except Exception as e:
             return {
                 "statusCode": 500,
-                "body": json.dumps({"error": "Internal server error"}),
+                "body": json.dumps({"error": f"Internal server error: {e}"}),
             }
 
     return wrapper

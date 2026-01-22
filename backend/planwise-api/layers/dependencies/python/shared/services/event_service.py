@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, List
 
 from shared.models.event import Event
 from shared.repositories.event_repository import EventRepository
@@ -26,6 +26,10 @@ class EventService:
     def get_event_by_id(self, event_id: str, board_id: str) -> Optional[Event]:
         item = self.repository.get_by_id_pair(f"BOARD#{board_id}", f"EVENT#{event_id}")
         return self._item_to_event(item)
+
+    def get_event_by_board(self, board_id: str) -> Optional[List[Event]]:
+        items = self.repository.get_pk_list(f"BOARD#{board_id}")
+        return [self._item_to_event(item) for item in items]
 
     def update_event(self, event: Event) -> Event:
         if event.start_time > event.end_time:
