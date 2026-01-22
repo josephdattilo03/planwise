@@ -22,8 +22,8 @@ class FolderService:
     
     def get_folders_at_depth(self, user_id: str, depth: int, path: str):
         items = self.repository.query_with_sort_key(
-            user_id, 
-            f"DEPTH#{depth}#PATH#{path}", 
+            f"USER#{user_id}", 
+            f"DEPTH#{depth}#PATH#/{path}", 
             self.gsi1_pk, 
             self.gsi1_sk, 
             self.gsi1_index

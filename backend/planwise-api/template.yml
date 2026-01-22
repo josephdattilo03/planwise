@@ -205,11 +205,11 @@ Resources:
             Path: /board/{board_id}/event/{id}
             Method: get
 
-  GetEventByBoardFunction:
+  GetEventsByBoardFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: functions/event/
-      Handler: get_event_by_board.lambda_handler
+      Handler: get_events_by_board.lambda_handler
       Environment:
         Variables:
           EVENT_TABLE: !Ref EventTable
@@ -348,11 +348,11 @@ Resources:
             Path: /user/{user_id}/folder/{id}
             Method: delete
 
-  GetFolderByDepthFunction:
+  GetFoldersByDepthFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: functions/folder/
-      Handler: get_folder_by_depth.lambda_handler
+      Handler: get_folders_by_depth.lambda_handler
       Environment:
         Variables:
           FOLDER_TABLE: !Ref FolderTable
@@ -365,7 +365,7 @@ Resources:
         GetEvent:
           Type: Api
           Properties:
-            Path: /user/{user_id}/folder/{depth}/{path}
+            Path: /user/{user_id}/folder/{depth}/{path+}
             Method: get
   # --------------------------------------------------------------------------
   # Board Functions 
@@ -411,6 +411,25 @@ Resources:
             Path: /user/{user_id}/board/{id}
             Method: get
 
+  GetBoardsByDepthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: get_boards_by_depth.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable 
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/board/{depth}/{path+}
+            Method: get
   UpdateBoardFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -451,7 +470,7 @@ Resources:
             Path: /user/{user_id}/board/{id}
             Method: delete
 
-  GetBoardByUser:
+  GetBoardsByUser:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: functions/board/

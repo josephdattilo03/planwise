@@ -47,6 +47,11 @@ class Repository:
         sk_attr: str = "SK",
         index_name: Optional[str] = None
     ) -> List[dict[str, Any]]:
+        print(pk)
+        print(sk_prefix)
+        print(pk_attr)
+        print(sk_attr)
+        print(index_name)
 
         query_kwargs = {
             "KeyConditionExpression": Key(pk_attr).eq(pk)
@@ -59,4 +64,5 @@ class Repository:
             query_kwargs["IndexName"] = index_name
         
         response = self.table.query(**query_kwargs)
+        print(response)
         return response.get('Items', [])
