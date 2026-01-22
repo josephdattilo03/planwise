@@ -20,3 +20,8 @@ class Task(BaseModel):
     @property
     def PK(self) -> str:
         return f"BOARD#{self.board_id}"
+
+    @computed_field
+    @property
+    def SK(self) -> str:
+        return f"TASK#{self.id}"
