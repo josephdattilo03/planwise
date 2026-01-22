@@ -1,5 +1,4 @@
-from pydantic import BaseModel, computed_field, field_serializer, FieldSerializationInfo
-from datetime import date
+from pydantic import BaseModel, computed_field
 
 
 class Board(BaseModel):
@@ -9,7 +8,6 @@ class Board(BaseModel):
     path: str
     name: str
     color: str
-    created_at: date
 
     
     @computed_field
@@ -20,10 +18,4 @@ class Board(BaseModel):
     @computed_field
     @property
     def SK(self) -> str:
-        return f"BOARD#{id}"
-
-    @field_serializer("created_at")
-    def serialize_date(
-        self, value: date, _info: FieldSerializationInfo
-    ) -> str:
-        return value.isoformat()
+        return f"BOARD#{self.id}"

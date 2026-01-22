@@ -1,5 +1,5 @@
 from shared.utils.db import get_table
-from repository import Repository
+from shared.repositories.repository import Repository
 
 class FolderRepository(Repository):
     def __init__(self):

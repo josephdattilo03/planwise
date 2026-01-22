@@ -191,6 +191,26 @@ Resources:
             Path: /board/{board_id}/event/{id}
             Method: get
 
+  GetEventByBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/event/
+      Handler: get_event_by_board.lambda_handler
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EventTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /board/{board_id}/event/
+            Method: get
+
   UpdateEventFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -314,7 +334,7 @@ Resources:
             Path: /user/{user_id}/folder/{id}
             Method: delete
   # --------------------------------------------------------------------------
-  # Folder Functions 
+  # Board Functions 
   # --------------------------------------------------------------------------
 
   CreateBoardFunction:
@@ -396,6 +416,27 @@ Resources:
           Properties:
             Path: /user/{user_id}/board/{id}
             Method: delete
+
+  GetBoardByUser:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: get_boards_by_user.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable 
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        DeleteEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/board/
+            Method: get
+
 
   # --------------------------------------------------------------------------
   # Tag Functions 
