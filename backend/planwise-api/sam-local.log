@@ -1,0 +1,214 @@
+No current session found, using default AWS::AccountId
+Initializing the lambda functions containers.
+DependenciesLayer is a local Layer in the template
+DependenciesLayer is a local Layer in the template
+DependenciesLayer is a local Layer in the template
+DependenciesLayer is a local Layer in the template
+DependenciesLayer is a local Layer in the template
+Local image is up-to-date
+Building image...Local image is up-to-date
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+DependenciesLayer is a local Layer in the template
+Local image is up-to-date
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+Local image is up-to-date
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+Local image is up-to-date
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+DependenciesLayer is a local Layer in the template
+Local image is up-to-date
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+Local image is up-to-date
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+Waiting for concurrent building to complete... (2s)
+Waiting for concurrent building to complete... (2s)
+.............Waiting for concurrent building to complete... (2s)
+Waiting for concurrent building to complete... (2s)
+Waiting for concurrent building to complete... (2s)
+Waiting for concurrent building to complete... (2s)
+Waiting for concurrent building to complete... (4s)
+Waiting for concurrent building to complete... (4s)
+Waiting for concurrent building to complete... (4s)
+Waiting for concurrent building to complete... (4s)
+Waiting for concurrent building to complete... (4s)
+Waiting for concurrent building to complete... (4s)
+Waiting for concurrent building to complete... (6s)
+Waiting for concurrent building to complete... (6s)
+Waiting for concurrent building to complete... (6s)
+Waiting for concurrent building to complete... (6s)
+....
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/DeleteBoardFunction as /var/task:ro,delegated, inside runtime container
+Image build completed by another process.Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/GetFoldersByDepthFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: e03ee250fb0b1dfb7bd82b5468283dadb0a1e4de0e996272db6be9446634c437
+SAM_CONTAINER_ID: 1163b2e4a55ef77af059d2b2db257405b91b07a326b03dc137e557e1e410b993
+DependenciesLayer is a local Layer in the template
+Building image...Waiting for concurrent building to complete... (6s)
+Waiting for concurrent building to complete... (8s)
+Waiting for concurrent building to complete... (8s)
+DependenciesLayer is a local Layer in the template
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+Waiting for concurrent building to complete... (8s)
+Waiting for concurrent building to complete... (8s)
+Waiting for concurrent building to complete... (8s)
+..................
+Image build completed by another process.Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/CreateEventFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: 425ca5104e068f83f0466f86b31babaeb0a07e8013e7082ad19b6b60d4b8f53d
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/CreateFolderFunction as /var/task:ro,delegated, inside runtime container
+Image build completed by another process.Image build completed by another process.SAM_CONTAINER_ID: 77e03672e249a613d43af1845990e31eff85ced724bc8d9881070045fa4ee6a1
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/UpdateBoardFunction as /var/task:ro,delegated, inside runtime container
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/GetBoardsByDepthFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: 2481cf730e4372a2a73eb2b48b52906e59df2217d9b3b32f7599cf7f9b2ebe47
+SAM_CONTAINER_ID: 8fed3444cc6387f6201297b0313c31860a8c69a308bea0b6cc2886bc999e20fb
+DependenciesLayer is a local Layer in the template
+Image build completed by another process.Image build completed by another process.Building image...Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/DeleteEventFunction as /var/task:ro,delegated, inside runtime container
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/UpdateFolderFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: 5e6b76764507e98e1041393af6a94cbe4872117a5ac3e9bdea6fec5128f88cec
+SAM_CONTAINER_ID: 941b9f1a3c045bbf7fc999cc9254173034339bc6716c2d17be1317a2b7613cad
+DependenciesLayer is a local Layer in the template
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+Waiting for concurrent building to complete... (10s)
+DependenciesLayer is a local Layer in the template
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+..................
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/GetFolderFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: d80d503107f087cee02c7ebb2b277647fe371eaa11bafa9e04f9b95e433df8a9
+Image build completed by another process.Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/GetBoardsByUser as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: 6e5e31d12a5cc84a1636891b135b8b89e88331971d71d63d5bf174be435ef074
+Image build completed by another process.DependenciesLayer is a local Layer in the template
+Building image...Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/GetBoardFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: 84f0b6cc72e9f8acaa1483ab35a8c5a8c4bda9e2121822da8a8c22117a8d5a1e
+Waiting for concurrent building to complete... (2s)
+DependenciesLayer is a local Layer in the template
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+DependenciesLayer is a local Layer in the template
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+.............Waiting for concurrent building to complete... (4s)
+.....
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/DeleteFolderFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: dd73bc1b5662f17f308fa35c8b48acf2ea767ce72cf58b6ea222eac3dc86eaf6
+Image build completed by another process.Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/GetEventFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: a7a67108a2d2768044128940837d8e35781dd01ef97cc9c69d2edc3fc751fbd8
+DependenciesLayer is a local Layer in the template
+Building image...Waiting for concurrent building to complete... (2s)
+Waiting for concurrent building to complete... (6s)
+..................
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/CreateBoardFunction as /var/task:ro,delegated, inside runtime container
+Image build completed by another process.SAM_CONTAINER_ID: e247f6ee2fdfb2e96e3220ee9626501f16b797703fb49ddcfbba760a5cadab56
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/CreateTagFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: d459b1d668dff9c57705d890c1e7bf3ee72d7516596520f161c627cccf4563e1
+DependenciesLayer is a local Layer in the template
+Building image...Waiting for concurrent building to complete... (8s)
+..................
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/GetTagFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: 42e840f2466098fc01cefb4b1c208791248a253e4328955bcccf6ac479d62c52
+Image build completed by another process.Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/UpdateEventFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: c977ff47313e4f9a952618de2012e567f27ce8a5d35a0eff740084533c7b1884
+DependenciesLayer is a local Layer in the template
+Building image...DependenciesLayer is a local Layer in the template
+Another process is building the same image, waiting...Waiting for concurrent building to complete... (0s)
+..................
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/UpdateTagFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: 0147e4f12b910c4ebf1567a10983d000cfd81b255f4974fd23a4770611ff1ed7
+DependenciesLayer is a local Layer in the template
+Building image...Waiting for concurrent building to complete... (2s)
+..................
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/DeleteTagFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: c296dcf86f02f36b54f5c1f754c795ae2928877ae1f6e1e0dc4b9fc2dd8705b9
+Image build completed by another process.Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/GetEventsByBoardFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: a39849830cf4d9fe9d62eb6187201b3ec4b8de830a3ccb11c73090add42b3ca6
+DependenciesLayer is a local Layer in the template
+Building image.....................
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/CreateTaskFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: 3531a21f766f6d1a9fffc52a2895abf81ccfa0f99db98689d0776132bbeb8a0e
+DependenciesLayer is a local Layer in the template
+Building image.....................
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/GetTaskFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: 7d270e4c60b1901bb6f566da1d42f765ba210a9b42284349ed98dbd78832ec63
+DependenciesLayer is a local Layer in the template
+Building image.....................
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/UpdateTaskFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: 44bca9adc2dcea18f8879d5b30cadac8447885062da86b1eababcaf176ee1363
+DependenciesLayer is a local Layer in the template
+Building image.....................
+Using local image: samcli/lambda-python:3.13-arm64-493161343c347761ce0653566.
+
+Mounting /Users/josephdattilo/Desktop/college/Senior/SeniorDesign/planwise/backend/planwise-api/.aws-sam/build/DeleteTaskFunction as /var/task:ro,delegated, inside runtime container
+SAM_CONTAINER_ID: d002885a31ce0442f496f6b8db81e45f06fe982cf4fb61cdb040068a12deb663
+Containers created. Waiting for readiness...
+Waiting for 24 containers to be running...
+All 24 containers running after 0.1 seconds
+All containers are ready.
+Mounting CreateTaskFunction at http://127.0.0.1:3000/board/task [POST, OPTIONS]
+Mounting CreateEventFunction at http://127.0.0.1:3000/board/event [POST, OPTIONS]
+Mounting DeleteFolderFunction at http://127.0.0.1:3000/user/{user_id}/folder/{id} [DELETE, OPTIONS]
+Mounting GetTaskFunction at http://127.0.0.1:3000/board/{board_id}/task/{id} [GET, OPTIONS]
+Mounting GetBoardFunction at http://127.0.0.1:3000/user/{user_id}/board/{id} [GET, OPTIONS]
+Mounting UpdateEventFunction at http://127.0.0.1:3000/board/{board_id}/event/{id} [PUT, OPTIONS]
+Mounting CreateTagFunction at http://127.0.0.1:3000/user/tag [POST, OPTIONS]
+Mounting CreateFolderFunction at http://127.0.0.1:3000/user/folder [POST, OPTIONS]
+Mounting GetFolderFunction at http://127.0.0.1:3000/user/{user_id}/folder/{id} [GET, OPTIONS]
+Mounting DeleteTagFunction at http://127.0.0.1:3000/user/{user_id}/tag/{id} [DELETE, OPTIONS]
+Mounting GetBoardsByUser at http://127.0.0.1:3000/user/{user_id}/board/ [GET, OPTIONS]
+Mounting UpdateTagFunction at http://127.0.0.1:3000/user/{user_id}/tag/{id} [PUT, OPTIONS]
+Mounting GetBoardsByDepthFunction at http://127.0.0.1:3000/user/{user_id}/board/{depth}/{path+} [GET, OPTIONS]
+Mounting UpdateFolderFunction at http://127.0.0.1:3000/user/{user_id}/folder/{id} [PUT, OPTIONS]
+Mounting GetEventFunction at http://127.0.0.1:3000/board/{board_id}/event/{id} [GET, OPTIONS]
+Mounting DeleteBoardFunction at http://127.0.0.1:3000/user/{user_id}/board/{id} [DELETE, OPTIONS]
+Mounting GetEventsByBoardFunction at http://127.0.0.1:3000/board/{board_id}/event/ [GET, OPTIONS]
+Mounting CreateBoardFunction at http://127.0.0.1:3000/user/board [POST, OPTIONS]
+Mounting UpdateTaskFunction at http://127.0.0.1:3000/board/{board_id}/task/{id} [PUT, OPTIONS]
+Mounting GetFoldersByDepthFunction at http://127.0.0.1:3000/user/{user_id}/folder/{depth}/{path+} [GET, OPTIONS]
+Mounting UpdateBoardFunction at http://127.0.0.1:3000/user/{user_id}/board/{id} [PUT, OPTIONS]
+Mounting GetTagFunction at http://127.0.0.1:3000/user/{user_id}/tag/{id} [GET, OPTIONS]
+Mounting DeleteEventFunction at http://127.0.0.1:3000/board/{board_id}/event/{id} [DELETE, OPTIONS]
+Mounting DeleteTaskFunction at http://127.0.0.1:3000/board/{board_id}/task/{id} [DELETE, OPTIONS]
+You can now browse to the above endpoints to invoke your functions. You do not need to restart/reload SAM CLI while working on your functions, changes will be reflected instantly/automatically. If you used sam build before running local commands, you will need to re-run sam build for the changes to be picked up. You only need to restart SAM CLI if you update your AWS SAM template
+2026-02-05 15:22:09 [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:3000
+2026-02-05 15:22:09 [33mPress CTRL+C to quit[0m

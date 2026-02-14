@@ -13,7 +13,6 @@ class BoardService:
         
     def create_board(self, board: Board) -> Board:
         board_dict = board.model_dump()
-        print(board_dict)
         self.repository.save(board_dict)
         return board
     def get_board_by_id(self, board_id: str, user_id: str) -> Optional[Board]:
@@ -38,7 +37,7 @@ class BoardService:
             self.gsi1_sk, 
             self.gsi1_index
         )
-        return [self._item_to_folder(item) for item in items]
+        return [self._item_to_board(item) for item in items]
 
     def _item_to_board(self, item: dict[str, Any]):
         try:

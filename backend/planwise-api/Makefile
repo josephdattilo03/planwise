@@ -4,6 +4,8 @@ AWS_ENDPOINT=http://localhost:8000
 AWS_REGION=us-east-1
 DUMMY_CREDS=AWS_ACCESS_KEY_ID=dummy AWS_SECRET_ACCESS_KEY=dummy
 
+export AWS_PAGER=""
+
 start-local: clean start-dynamodb health-check create-tables build-sam start-api
 
 # ------------------------
@@ -141,3 +143,6 @@ rebuild: clean build-sam
 
 logs:
 	@docker compose logs -f
+
+insert-db-data:
+	@python3 tests/scripts/insert_db_data.py
