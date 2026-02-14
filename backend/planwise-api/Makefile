@@ -110,7 +110,7 @@ create-tables:
 # ------------------------
 build-sam:
 	@echo "Building SAM application..."
-	@sam build
+	@sam build --use-container
 	@echo "SAM build complete"
 
 # ------------------------

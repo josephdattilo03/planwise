@@ -4,8 +4,8 @@ from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
 from aws_lambda_typing.responses import APIGatewayProxyResponseV2
 from pydantic import ValidationError
-from shared.models.board import Board
-from shared.services.board_service import BoardService
+from shared.models.note import Note
+from shared.services.note_service import NoteService
 from shared.utils.errors import ValidationAppError
 from shared.utils.lambda_error_wrapper import lambda_http_handler
 
@@ -13,7 +13,7 @@ from shared.utils.lambda_error_wrapper import lambda_http_handler
 def lambda_handler(
     event: lambda_events.APIGatewayProxyEventV2, context: lambda_context.Context
 ) -> APIGatewayProxyResponseV2:
-    service = BoardService()
+    service = NoteService()
 
     if not event.get("body"):
         raise ValidationAppError()
@@ -22,8 +22,8 @@ def lambda_handler(
 
 
     try:
-        board_obj = Board(**body)
-        service.create_board(board_obj)
+        note_obj = Note(**body)
+        service.create_event(note_obj)
     except ValidationError as e:
         raise ValidationAppError(e.errors())
         
@@ -33,8 +33,8 @@ def lambda_handler(
         "statusCode": 201,
         "body": json.dumps(
             {
-                "message": "Board created successfully",
-                "event_id": board_obj.id,
+                "message": "Event created successfully",
+                "event_id": note_obj.id,
             }
         ),
     }
