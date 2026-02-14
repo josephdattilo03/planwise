@@ -162,22 +162,6 @@ Resources:
         - AttributeName: SK
           KeyType: RANGE
 
-    NoteTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: note-table
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: PK
-          AttributeType: S
-        - AttributeName: SK
-          AttributeType: S    
-      KeySchema:
-        - AttributeName: PK
-          KeyType: HASH
-        - AttributeName: SK
-          KeyType: RANGE
-
   # --------------------------------------------------------------------------
   # Event Functions
   # --------------------------------------------------------------------------
@@ -673,89 +657,6 @@ Resources:
           Type: Api
           Properties:
             Path: /board/{board_id}/task/{id}
-            Method: delete
-
-    # --------------------------------------------------------------------------
-  # note Functions
-  # --------------------------------------------------------------------------
-  CreateNoteFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/note/
-      Handler: create_note.lambda_handler
-      Environment:
-        Variables:
-          NOTE_TABLE: !Ref NoteTable
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref NoteTable
-      Notes:
-        CreateNote:
-          Type: Api
-          Properties:
-            Path: /user/note
-            Method: post
-
-  GetNoteFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/note/
-      Handler: get_note.lambda_handler
-      Environment:
-        Variables:
-          NOTE_TABLE: !Ref NoteTable
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref NoteTable
-      Notes:
-        GetNote:
-          Type: Api
-          Properties:
-            Path: /user/{user_id}/note/{id}
-            Method: get
-
-  UpdateNoteFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/note/
-      Handler: update_note.lambda_handler
-      Environment:
-        Variables:
-          NOTE_TABLE: !Ref NoteTable
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref NoteTable
-      Notes:
-        UpdateNote:
-          Type: Api
-          Properties:
-            Path: /user/{user_id}/note/{id}
-            Method: put
-
-  DeleteNoteFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/note/
-      Handler: delete_note.lambda_handler
-      Environment:
-        Variables:
-          NOTE_TABLE: !Ref NoteTable
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref NoteTable
-      Notes:
-        DeleteNote:
-          Type: Api
-          Properties:
-            Path: /user/{user_id}/note/{id}
             Method: delete
 # ============================================================================
 # OUTPUTS
