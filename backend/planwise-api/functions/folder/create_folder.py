@@ -30,7 +30,7 @@ def lambda_handler(
         "statusCode": 201,
         "body": json.dumps(
             {
-                "message": "Event created successfully",
+                "message": "Folder created successfully",
                 "event_id": folder_object.id,
             }
         ),

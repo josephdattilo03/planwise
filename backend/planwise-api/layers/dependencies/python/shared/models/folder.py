@@ -20,9 +20,9 @@ class Folder(BaseModel):
     @computed_field
     @property
     def GSI1PK(self) -> str:
-        return f"#USER#{self.user_id}"
+        return f"USER#{self.user_id}"
     
     @computed_field
     @property
     def GSI1SK(self) -> str:
-        return f"#DEPTH#{self.depth}#PATH#{self.path}"
+        return f"DEPTH#{self.depth}#PATH#{self.path}"

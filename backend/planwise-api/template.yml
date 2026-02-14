@@ -61,13 +61,11 @@ Resources:
     Properties:
       TableName: event-table
       BillingMode: PAY_PER_REQUEST
-
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
-
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
@@ -79,49 +77,69 @@ Resources:
     Properties:
       TableName: folder-table
       BillingMode: PAY_PER_REQUEST
-
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
-
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
 
   BoardTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: board-table
       BillingMode: PAY_PER_REQUEST
-
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
-
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
 
   TagTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: tag-table
       BillingMode: PAY_PER_REQUEST
-
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
-
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
@@ -133,20 +151,16 @@ Resources:
     Properties:
       TableName: task-table
       BillingMode: PAY_PER_REQUEST
-
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
-
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
-
-
 
   # --------------------------------------------------------------------------
   # Event Functions
@@ -191,11 +205,11 @@ Resources:
             Path: /board/{board_id}/event/{id}
             Method: get
 
-  GetEventByBoardFunction:
+  GetEventsByBoardFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: functions/event/
-      Handler: get_event_by_board.lambda_handler
+      Handler: get_events_by_board.lambda_handler
       Environment:
         Variables:
           EVENT_TABLE: !Ref EventTable
@@ -333,6 +347,26 @@ Resources:
           Properties:
             Path: /user/{user_id}/folder/{id}
             Method: delete
+
+  GetFoldersByDepthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: get_folders_by_depth.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder/{depth}/{path+}
+            Method: get
   # --------------------------------------------------------------------------
   # Board Functions 
   # --------------------------------------------------------------------------
@@ -377,6 +411,25 @@ Resources:
             Path: /user/{user_id}/board/{id}
             Method: get
 
+  GetBoardsByDepthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: get_boards_by_depth.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable 
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/board/{depth}/{path+}
+            Method: get
   UpdateBoardFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -417,7 +470,7 @@ Resources:
             Path: /user/{user_id}/board/{id}
             Method: delete
 
-  GetBoardByUser:
+  GetBoardsByUser:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: functions/board/
