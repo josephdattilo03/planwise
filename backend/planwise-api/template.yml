@@ -10,8 +10,8 @@ Description: >
 Parameters:
   DynamoDBEndpoint:
     Type: String
-    Default: ""
-    Description: "DynamoDB endpoint URL for local development (leave empty for AWS)"
+    Default: ''
+    Description: 'DynamoDB endpoint URL for local development (leave empty for AWS)'
 
 # ============================================================================
 # GLOBALS
@@ -46,8 +46,8 @@ Resources:
       ContentUri: layers/dependencies
       CompatibleRuntimes:
         - python3.13
-      CompatibleArchitectures: 
-      - arm64      
+      CompatibleArchitectures:
+        - arm64
       RetentionPolicy: Delete
     Metadata:
       BuildMethod: makefile
@@ -150,6 +150,22 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: task-table
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
+  NoteTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: note-table
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: PK
@@ -265,7 +281,7 @@ Resources:
             Path: /board/{board_id}/event/{id}
             Method: delete
   # --------------------------------------------------------------------------
-  # Folder Functions 
+  # Folder Functions
   # --------------------------------------------------------------------------
 
   CreateFolderFunction:
@@ -315,12 +331,12 @@ Resources:
       Handler: update_folder.lambda_handler
       Environment:
         Variables:
-          FOLDER_TABLE: !Ref FolderTable 
+          FOLDER_TABLE: !Ref FolderTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref FolderTable 
+            TableName: !Ref FolderTable
       Events:
         UpdateEvent:
           Type: Api
@@ -335,7 +351,7 @@ Resources:
       Handler: delete_folder.lambda_handler
       Environment:
         Variables:
-          FOLDER_TABLE: !Ref FolderTable 
+          FOLDER_TABLE: !Ref FolderTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
@@ -368,7 +384,7 @@ Resources:
             Path: /user/{user_id}/folder/{depth}/{path+}
             Method: get
   # --------------------------------------------------------------------------
-  # Board Functions 
+  # Board Functions
   # --------------------------------------------------------------------------
 
   CreateBoardFunction:
@@ -378,7 +394,7 @@ Resources:
       Handler: create_board.lambda_handler
       Environment:
         Variables:
-          BOARD_TABLE: !Ref BoardTable 
+          BOARD_TABLE: !Ref BoardTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
@@ -398,7 +414,7 @@ Resources:
       Handler: get_board.lambda_handler
       Environment:
         Variables:
-          BOARD_TABLE: !Ref BoardTable 
+          BOARD_TABLE: !Ref BoardTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
@@ -418,7 +434,7 @@ Resources:
       Handler: get_boards_by_depth.lambda_handler
       Environment:
         Variables:
-          BOARD_TABLE: !Ref BoardTable 
+          BOARD_TABLE: !Ref BoardTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
@@ -437,12 +453,12 @@ Resources:
       Handler: update_board.lambda_handler
       Environment:
         Variables:
-          BOARD_TABLE: !Ref BoardTable 
+          BOARD_TABLE: !Ref BoardTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref BoardTable 
+            TableName: !Ref BoardTable
       Events:
         UpdateEvent:
           Type: Api
@@ -457,7 +473,7 @@ Resources:
       Handler: delete_board.lambda_handler
       Environment:
         Variables:
-          BOARD_TABLE: !Ref BoardTable 
+          BOARD_TABLE: !Ref BoardTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
@@ -477,7 +493,7 @@ Resources:
       Handler: get_boards_by_user.lambda_handler
       Environment:
         Variables:
-          BOARD_TABLE: !Ref BoardTable 
+          BOARD_TABLE: !Ref BoardTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
@@ -490,9 +506,8 @@ Resources:
             Path: /user/{user_id}/board/
             Method: get
 
-
   # --------------------------------------------------------------------------
-  # Tag Functions 
+  # Tag Functions
   # --------------------------------------------------------------------------
 
   CreateTagFunction:
@@ -576,7 +591,7 @@ Resources:
             Method: delete
 
   # --------------------------------------------------------------------------
-  # Task Functions 
+  # Task Functions
   # --------------------------------------------------------------------------
 
   CreateTaskFunction:
@@ -658,18 +673,101 @@ Resources:
           Properties:
             Path: /board/{board_id}/task/{id}
             Method: delete
+
+    # --------------------------------------------------------------------------
+  # Note Functions
+  # --------------------------------------------------------------------------
+  CreateNoteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/note/
+      Handler: create_note.lambda_handler
+      Environment:
+        Variables:
+          NOTE_TABLE: !Ref NoteTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NoteTable
+      Events:
+        CreateNote:
+          Type: Api
+          Properties:
+            Path: /user/note
+            Method: post
+
+  GetNoteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/note/
+      Handler: get_note.lambda_handler
+      Environment:
+        Variables:
+          NOTE_TABLE: !Ref NoteTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref NoteTable
+      Events:
+        GetNote:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/note/{id}
+            Method: get
+
+  UpdateNoteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/note/
+      Handler: update_note.lambda_handler
+      Environment:
+        Variables:
+          NOTE_TABLE: !Ref NoteTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NoteTable
+      Events:
+        UpdateNote:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/note/{id}
+            Method: put
+
+  DeleteNoteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/note/
+      Handler: delete_note.lambda_handler
+      Environment:
+        Variables:
+          NOTE_TABLE: !Ref NoteTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NoteTable
+      Events:
+        DeleteNote:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/note/{id}
+            Method: delete
 # ============================================================================
 # OUTPUTS
 # ============================================================================
 Outputs:
   ApiEndpoint:
-    Description: "API Gateway endpoint URL for Prod stage"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+    Description: 'API Gateway endpoint URL for Prod stage'
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/'
 
   EventTableName:
-    Description: "DynamoDB table name for event"
+    Description: 'DynamoDB table name for event'
     Value: !Ref EventTable
 
   CreateEventFunctionArn:
-    Description: "Create Event Lambda Function ARN"
+    Description: 'Create Event Lambda Function ARN'
     Value: !GetAtt CreateEventFunction.Arn
