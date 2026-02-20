@@ -2,7 +2,7 @@ import requests
 import time
 from datetime import date, timedelta
 
-base_url = "http://127.0.0.1:3000"
+base_url = "http://127.0.0.1:3001"
 
 # User data
 # users = [
@@ -30,7 +30,7 @@ base_url = "http://127.0.0.1:3000"
 boards = [
     {
         "id": "bd_1",
-        "user_id": "usr_1",
+        "user_id": "jdatt@sas.upenn.edu",
         "path": "/work",
         "depth": 1,
         "name": "Work Board",
@@ -38,7 +38,7 @@ boards = [
     },
     {
         "id": "bd_2",
-        "user_id": "usr_1",
+        "user_id": "jdatt@sas.upenn.edu",
         "path": "/personal",
         "depth": 1,
         "name": "Personal Board",
@@ -46,7 +46,7 @@ boards = [
     },
     {
         "id": "bd_3",
-        "user_id": "usr_1",
+        "user_id": "jdatt@sas.upenn.edu",
         "path": "/work/projects",
         "depth": 2,
         "name": "Projects Board",
@@ -143,44 +143,92 @@ folders = [
 tags = [
     {
         "id": "tag_1",
-        "user_id": "usr_1",
+        "user_id": "jdatt@sas.upenn.edu",
         "name": "Urgent",
-        "background_color": "#ff4444",
-        "border_color": "#cc0000",
-        "text_color": "#ffffff"
+        "background_color": "#F3E8FF",
+        "border_color": "#E9D5FF",
+        "text_color": "#6B21A8",
     },
     {
         "id": "tag_2",
-        "user_id": "usr_1",
-        "name": "Low Priority",
-        "background_color": "#e0e0e0",
-        "border_color": "#999999",
-        "text_color": "#333333"
+        "user_id": "jdatt@sas.upenn.edu",
+        "name": "Design",
+        "background_color": "#DBEAFE",
+        "border_color": "#BFD7FE",
+        "text_color": "#1E40AF",
     },
     {
         "id": "tag_3",
-        "user_id": "usr_2",
-        "name": "Important",
-        "background_color": "#ffa500",
-        "border_color": "#ff8800",
-        "text_color": "#000000"
+        "user_id": "jdatt@sas.upenn.edu",
+        "name": "Review",
+        "background_color": "#F6FBC0",
+        "border_color": "#E2EF50",
+        "text_color": "#909D00",
     },
     {
         "id": "tag_4",
-        "user_id": "usr_2",
-        "name": "Personal",
-        "background_color": "#4a90e2",
-        "border_color": "#2e5c8a",
-        "text_color": "#ffffff"
+        "user_id": "jdatt@sas.upenn.edu",
+        "name": "Frontend",
+        "background_color": "#DCFCE7",
+        "border_color": "#B8EBCA",
+        "text_color": "#166534",
     },
     {
         "id": "tag_5",
-        "user_id": "usr_3",
-        "name": "Review",
-        "background_color": "#9b59b6",
-        "border_color": "#7d3c98",
-        "text_color": "#ffffff"
-    }
+        "user_id": "jdatt@sas.upenn.edu",
+        "name": "Bug",
+        "background_color": "#FEE2E2",
+        "border_color": "#FECACA",
+        "text_color": "#DC2626",
+    },
+    {
+        "id": "tag_6",
+        "user_id": "jdatt@sas.upenn.edu",
+        "name": "Devops",
+        "background_color": "#D7F8FD",
+        "border_color": "#9BF2FF",
+        "text_color": "#20A6BB",
+    },
+    {
+        "id": "tag_7",
+        "user_id": "jdatt@sas.upenn.edu",
+        "name": "Presentation",
+        "background_color": "#EFE6F1",
+        "border_color": "#DFCAE1",
+        "text_color": "#95589D",
+    },
+    {
+        "id": "tag_8",
+        "user_id": "jdatt@sas.upenn.edu",
+        "name": "Tag1",
+        "background_color": "#EFE6F1",
+        "border_color": "#DFCAE1",
+        "text_color": "#95589D",
+    },
+    {
+        "id": "tag_9",
+        "user_id": "jdatt@sas.upenn.edu",
+        "name": "Tag2",
+        "background_color": "#EFE6F1",
+        "border_color": "#DFCAE1",
+        "text_color": "#95589D",
+    },
+    {
+        "id": "tag_10",
+        "user_id": "jdatt@sas.upenn.edu",
+        "name": "Tag3",
+        "background_color": "#EFE6F1",
+        "border_color": "#DFCAE1",
+        "text_color": "#95589D",
+    },
+    {
+        "id": "tag_11",
+        "user_id": "jdatt@sas.upenn.edu",
+        "name": "Tag4",
+        "background_color": "#EFE6F1",
+        "border_color": "#DFCAE1",
+        "text_color": "#95589D",
+    },
 ]
 
 # Task data
@@ -188,63 +236,75 @@ today = date.today()
 tasks = [
     {
         "id": "tsk_1",
+        "user_id": "jdatt@sas.upenn.edu",
         "board_id": "bd_1",
         "name": "Complete project proposal",
         "description": "Draft and finalize the Q1 project proposal for client review",
         "progress": "in-progress",
         "priority_level": 1,
         "due_date": (today + timedelta(days=7)).isoformat(),
-        "created_at": (today - timedelta(days=3)).isoformat()
+        "created_at": (today - timedelta(days=3)).isoformat(),
+        "tag_ids": []
     },
     {
         "id": "tsk_2",
+        "user_id": "jdatt@sas.upenn.edu",
         "board_id": "bd_1",
         "name": "Review budget",
         "description": "Analyze and approve departmental budget for next quarter",
         "progress": "to-do",
         "priority_level": 2,
         "due_date": (today + timedelta(days=14)).isoformat(),
-        "created_at": (today - timedelta(days=1)).isoformat()
+        "created_at": (today - timedelta(days=1)).isoformat(),
+        "tag_ids": []
     },
     {
         "id": "tsk_3",
+        "user_id": "jdatt@sas.upenn.edu",
         "board_id": "bd_2",
         "name": "Team meeting preparation",
         "description": "Prepare slides and agenda for weekly team sync",
         "progress": "done",
         "priority_level": 3,
         "due_date": (today - timedelta(days=1)).isoformat(),
-        "created_at": (today - timedelta(days=5)).isoformat()
+        "created_at": (today - timedelta(days=5)).isoformat(),
+        "tag_ids": []
     },
     {
         "id": "tsk_4",
+        "user_id": "jdatt@sas.upenn.edu",
         "board_id": "bd_3",
         "name": "Update documentation",
         "description": "Revise user manual with latest feature updates",
         "progress": "pending",
         "priority_level": 2,
         "due_date": (today + timedelta(days=21)).isoformat(),
-        "created_at": (today - timedelta(days=2)).isoformat()
+        "created_at": (today - timedelta(days=2)).isoformat(),
+        "tag_ids": []
     },
     {
         "id": "tsk_5",
+        "user_id": "jdatt@sas.upenn.edu",
         "board_id": "bd_4",
         "name": "Code review",
         "description": "Review pull requests from development team",
         "progress": "in-progress",
         "priority_level": 1,
         "due_date": (today + timedelta(days=2)).isoformat(),
-        "created_at": today.isoformat()
+        "created_at": today.isoformat(),
+        "tag_ids": []
     },
     {
         "id": "tsk_6",
+        "user_id": "jdatt@sas.upenn.edu",
         "board_id": "bd_5",
         "name": "Database optimization",
         "description": "Optimize queries and indexing for better performance",
         "progress": "to-do",
         "priority_level": 2,
         "due_date": (today + timedelta(days=30)).isoformat(),
-        "created_at": (today - timedelta(days=4)).isoformat()
+        "created_at": (today - timedelta(days=4)).isoformat(),
+        "tag_ids": []
     }
 ]
 

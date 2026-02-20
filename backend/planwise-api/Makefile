@@ -95,9 +95,12 @@ create-tables:
 		--attribute-definitions \
 			AttributeName=PK,AttributeType=S \
 			AttributeName=SK,AttributeType=S \
+			AttributeName=GSI1PK,AttributeType=S \
 		--key-schema \
 			AttributeName=PK,KeyType=HASH \
 			AttributeName=SK,KeyType=RANGE \
+		--global-secondary-indexes \
+			'[{"IndexName":"GSI1","KeySchema":[{"AttributeName":"GSI1PK","KeyType":"HASH"}],"Projection":{"ProjectionType":"ALL"}}]' \
 		--billing-mode PAY_PER_REQUEST \
 		--endpoint-url $(AWS_ENDPOINT) \
 		--region $(AWS_REGION) \
@@ -122,7 +125,7 @@ start-api:
 		echo "ERROR: .aws-sam/build directory not found. Run 'make build-sam' first."; \
 		exit 1; \
 	fi
-	SAM_CLI_PARALLEL=false sam local start-api
+	SAM_CLI_PARALLEL=false sam local start-api --port 3001
 
 # ------------------------
 # Cleanup
