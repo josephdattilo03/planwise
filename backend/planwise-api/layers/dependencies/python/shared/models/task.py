@@ -11,10 +11,9 @@ class Task(BaseModel):
     progress: Literal["to-do", "in-progress", "done", "pending"]
     priority_level: int
     due_date: date
-    created_at: date
     tag_ids: List[str]
 
-    @field_serializer("due_date", "created_at")
+    @field_serializer("due_date")
     def date_serializer(self, value: date, _info: FieldSerializationInfo):
         return value.isoformat()
 

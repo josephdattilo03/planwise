@@ -90,49 +90,49 @@ boards = [
 folders = [
     {
         "id": "fld_1",
-        "user_id": "usr_1",
+        "user_id": "jdatt@sas.upenn.edu",
         "path": "/work",
         "depth": 1,
         "name": "Work"
     },
     {
         "id": "fld_2",
-        "user_id": "usr_1",
+        "user_id": "jdatt@sas.upenn.edu",
         "path": "/personal",
         "depth": 1,
         "name": "Personal"
     },
     {
         "id": "fld_3",
-        "user_id": "usr_1",
+        "user_id": "jdatt@sas.upenn.edu",
         "path": "/work/projects",
         "depth": 2,
         "name": "Projects"
     },
     {
         "id": "fld_7",
-        "user_id": "usr_1",
+        "user_id": "jdatt@sas.upenn.edu",
         "path": "/work/projects",
         "depth": 2,
         "name": "Better Projects"
     },
     {
         "id": "fld_4",
-        "user_id": "usr_2",
+        "user_id": "jdatt@sas.upenn.edu",
         "path": "/home",
         "depth": 1,
         "name": "Home"
     },
     {
         "id": "fld_5",
-        "user_id": "usr_2",
+        "user_id": "jdatt@sas.upenn.edu",
         "path": "/home/fitness",
         "depth": 2,
         "name": "Fitness"
     },
     {
         "id": "fld_6",
-        "user_id": "usr_3",
+        "user_id": "jdatt@sas.upenn.edu",
         "path": "/archive",
         "depth": 1,
         "name": "Archive"
@@ -235,76 +235,76 @@ tags = [
 today = date.today()
 tasks = [
     {
-        "id": "tsk_1",
-        "user_id": "jdatt@sas.upenn.edu",
-        "board_id": "bd_1",
-        "name": "Complete project proposal",
-        "description": "Draft and finalize the Q1 project proposal for client review",
-        "progress": "in-progress",
-        "priority_level": 1,
-        "due_date": (today + timedelta(days=7)).isoformat(),
-        "created_at": (today - timedelta(days=3)).isoformat(),
-        "tag_ids": []
+        "id":"tsk_1",
+        "user_id":"jdatt@sas.upenn.edu",
+        "board_id":"bd_1",
+        "name":"Complete project proposal",
+        "description":"Draft and finalize the Q1 project proposal for client review",
+        "progress":"in-progress",
+        "priority_level":1,
+        "due_date":(today+timedelta(days=7)).isoformat(),
+        "created_at":(today-timedelta(days=3)).isoformat(),
+        "tag_ids":["tag_1","tag_7"]   # Urgent, Presentation
     },
     {
-        "id": "tsk_2",
-        "user_id": "jdatt@sas.upenn.edu",
-        "board_id": "bd_1",
-        "name": "Review budget",
-        "description": "Analyze and approve departmental budget for next quarter",
-        "progress": "to-do",
-        "priority_level": 2,
-        "due_date": (today + timedelta(days=14)).isoformat(),
-        "created_at": (today - timedelta(days=1)).isoformat(),
-        "tag_ids": []
+        "id":"tsk_2",
+        "user_id":"jdatt@sas.upenn.edu",
+        "board_id":"bd_1",
+        "name":"Review budget",
+        "description":"Analyze and approve departmental budget for next quarter",
+        "progress":"to-do",
+        "priority_level":2,
+        "due_date":(today+timedelta(days=14)).isoformat(),
+        "created_at":(today-timedelta(days=1)).isoformat(),
+        "tag_ids":["tag_3"]  # Review
     },
     {
-        "id": "tsk_3",
-        "user_id": "jdatt@sas.upenn.edu",
-        "board_id": "bd_2",
-        "name": "Team meeting preparation",
-        "description": "Prepare slides and agenda for weekly team sync",
-        "progress": "done",
-        "priority_level": 3,
-        "due_date": (today - timedelta(days=1)).isoformat(),
-        "created_at": (today - timedelta(days=5)).isoformat(),
-        "tag_ids": []
+        "id":"tsk_3",
+        "user_id":"jdatt@sas.upenn.edu",
+        "board_id":"bd_2",
+        "name":"Team meeting preparation",
+        "description":"Prepare slides and agenda for weekly team sync",
+        "progress":"done",
+        "priority_level":3,
+        "due_date":(today-timedelta(days=1)).isoformat(),
+        "created_at":(today-timedelta(days=5)).isoformat(),
+        "tag_ids":["tag_7"]  # Presentation
     },
     {
-        "id": "tsk_4",
-        "user_id": "jdatt@sas.upenn.edu",
-        "board_id": "bd_3",
-        "name": "Update documentation",
-        "description": "Revise user manual with latest feature updates",
-        "progress": "pending",
-        "priority_level": 2,
-        "due_date": (today + timedelta(days=21)).isoformat(),
-        "created_at": (today - timedelta(days=2)).isoformat(),
-        "tag_ids": []
+        "id":"tsk_4",
+        "user_id":"jdatt@sas.upenn.edu",
+        "board_id":"bd_3",
+        "name":"Update documentation",
+        "description":"Revise user manual with latest feature updates",
+        "progress":"pending",
+        "priority_level":2,
+        "due_date":(today+timedelta(days=21)).isoformat(),
+        "created_at":(today-timedelta(days=2)).isoformat(),
+        "tag_ids":["tag_2","tag_4"]  # Design, Frontend
     },
     {
-        "id": "tsk_5",
-        "user_id": "jdatt@sas.upenn.edu",
-        "board_id": "bd_4",
-        "name": "Code review",
-        "description": "Review pull requests from development team",
-        "progress": "in-progress",
-        "priority_level": 1,
-        "due_date": (today + timedelta(days=2)).isoformat(),
-        "created_at": today.isoformat(),
-        "tag_ids": []
+        "id":"tsk_5",
+        "user_id":"jdatt@sas.upenn.edu",
+        "board_id":"bd_4",
+        "name":"Code review",
+        "description":"Review pull requests from development team",
+        "progress":"in-progress",
+        "priority_level":1,
+        "due_date":(today+timedelta(days=2)).isoformat(),
+        "created_at":today.isoformat(),
+        "tag_ids":["tag_3","tag_5"]  # Review, Bug
     },
     {
-        "id": "tsk_6",
-        "user_id": "jdatt@sas.upenn.edu",
-        "board_id": "bd_5",
-        "name": "Database optimization",
-        "description": "Optimize queries and indexing for better performance",
-        "progress": "to-do",
-        "priority_level": 2,
-        "due_date": (today + timedelta(days=30)).isoformat(),
-        "created_at": (today - timedelta(days=4)).isoformat(),
-        "tag_ids": []
+        "id":"tsk_6",
+        "user_id":"jdatt@sas.upenn.edu",
+        "board_id":"bd_5",
+        "name":"Database optimization",
+        "description":"Optimize queries and indexing for better performance",
+        "progress":"to-do",
+        "priority_level":2,
+        "due_date":(today+timedelta(days=30)).isoformat(),
+        "created_at":(today-timedelta(days=4)).isoformat(),
+        "tag_ids":["tag_6"]  # Devops
     }
 ]
 

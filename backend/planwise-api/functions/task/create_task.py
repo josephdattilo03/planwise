@@ -21,7 +21,8 @@ def lambda_handler(
         raise ValidationAppError()
 
     body = json.loads(event.get("body"))
-    body["id"] = str(uuid4())
+    if not body.get("id"):
+        body["id"] = str(uuid4())
 
     try:
         task_obj = Task(**body)

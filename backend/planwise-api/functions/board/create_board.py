@@ -21,7 +21,8 @@ def lambda_handler(
         raise ValidationAppError()
 
     body = json.loads(event.get("body"))
-    body["id"] = str(uuid4())
+    if not body.get("id"):
+        body["id"] = str(uuid4())
 
 
     try:
@@ -37,7 +38,7 @@ def lambda_handler(
         "body": json.dumps(
             {
                 "message": "Board created successfully",
-                "event_id": board_obj.id,
+                "board_id": board_obj.id,
             }
         ),
     }
