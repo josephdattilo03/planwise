@@ -1,0 +1,6 @@
+[
+  { "id": 301, "name": "HW1: Asymptotics", "due_at": "2026-03-02T23:59:00Z", "published": true },
+  { "id": 302, "name": "HW2: Dynamic Programming", "due_at": "2026-03-07T23:59:00Z", "published": true },
+  { "id": 303, "name": "Reading: Greedy Algorithms", "due_at": null, "published": true },
+  { "id": 304, "name": "Project Proposal (Draft)", "due_at": "2026-03-05T23:59:00Z", "published": false }
+]

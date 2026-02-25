@@ -1,4 +1,5 @@
 [
   { "id": 4, "name": "Biology 101", "course_code": "BIO101" },
-  { "id": 5, "name": "History of Art", "course_code": "ART210" }
+  { "id": 5, "name": "History of Art", "course_code": "ART210" },
+  { "id": 6, "name": "Algorithms", "course_code": "CIS3200" }
 ]
