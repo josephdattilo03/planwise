@@ -1,0 +1,8 @@
+{
+  "id": 10000000000001,
+  "name": "Mock User",
+  "short_name": "Mock",
+  "sortable_name": "User, Mock",
+  "login_id": "mock.user@example.com",
+  "primary_email": "mock.user@example.com"
+}

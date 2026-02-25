@@ -1,0 +1,23 @@
+[
+  {
+    "id": 5001,
+    "course_id": 4,
+    "title": "Bio Lab 1",
+    "type": "assignment",
+    "due_at": "2026-03-02T23:59:00Z"
+  },
+  {
+    "id": 5002,
+    "course_id": 5,
+    "title": "Art Essay",
+    "type": "assignment",
+    "due_at": "2026-03-04T23:59:00Z"
+  },
+  {
+    "id": 5003,
+    "course_id": 6,
+    "title": "HW1: Asymptotics",
+    "type": "assignment",
+    "due_at": "2026-03-02T23:59:00Z"
+  }
+]
