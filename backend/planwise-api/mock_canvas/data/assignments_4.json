@@ -1,0 +1,4 @@
+[
+  { "id": 101, "name": "Bio Lab 1", "due_at": "2026-03-02T23:59:00Z", "published": true },
+  { "id": 102, "name": "Bio Quiz 1", "due_at": "2026-03-06T23:59:00Z", "published": true }
+]
