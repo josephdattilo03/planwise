@@ -1,5 +1,9 @@
 from shared.models.tag import Tag
 from shared.repositories.tag_repository import TagRepository
+from typing import Optional, List, Any
+from shared.models.tag import Tag
+from shared.utils.errors import ValidationAppError
+from pydantic import ValidationError
 
 
 class TagService:
@@ -19,6 +23,10 @@ class TagService:
         sk = f"TAG#{tag_id}"
         tag_data = self.repository.get_by_id_pair(pk, sk)
         return Tag(**tag_data)
+    
+    def get_tags_by_user_id(self, user_id: str) -> Optional[List[Tag]]:
+        items = self.repository.get_pk_list(f"USER#{user_id}")
+        return [self._item_to_tag(item) for item in items]
 
     def update_tag(self, tag: Tag) -> Tag:
         """Update an existing tag"""
@@ -32,3 +40,10 @@ class TagService:
         pk = f"USER#{user_id}"
         sk = f"TAG#{tag_id}"
         self.repository.delete_by_id_pair(pk, sk)
+
+    def _item_to_tag(self, item: dict[str, Any]):
+        try:
+            board = Tag(**item)
+        except ValidationError as e:
+            raise ValidationAppError(e.errors())
+        return board

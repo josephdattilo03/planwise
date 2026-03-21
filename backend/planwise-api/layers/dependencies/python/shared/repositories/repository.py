@@ -44,7 +44,7 @@ class Repository:
         pk: str, 
         sk_prefix: Optional[str] = None,
         pk_attr: str = "PK",
-        sk_attr: str = "SK",
+        sk_attr: Optional[str] = None,
         index_name: Optional[str] = None
     ) -> List[dict[str, Any]]:
 

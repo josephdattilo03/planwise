@@ -156,11 +156,21 @@ Resources:
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
 
   NoteTable:
     Type: AWS::DynamoDB::Table
@@ -322,6 +332,26 @@ Resources:
           Type: Api
           Properties:
             Path: /user/{user_id}/folder/{id}
+            Method: get
+
+  GetFoldersByUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: get_folders_by_user.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder
             Method: get
 
   UpdateFolderFunction:
@@ -589,6 +619,26 @@ Resources:
           Properties:
             Path: /user/{user_id}/tag/{id}
             Method: delete
+  
+  GetTagsByUser:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/tag/
+      Handler: get_tags_by_user.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref TagTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagTable
+      Events:
+        DeleteEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/tag/
+            Method: get
 
   # --------------------------------------------------------------------------
   # Task Functions
@@ -756,6 +806,26 @@ Resources:
           Properties:
             Path: /user/{user_id}/note/{id}
             Method: delete
+
+  GetTaskByUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/task/
+      Handler: get_tasks_by_user.lambda_handler
+      Environment:
+        Variables:
+          TASK_TABLE: !Ref TaskTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TaskTable
+      Events:
+        GetTask:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/task/
+            Method: get
 # ============================================================================
 # OUTPUTS
 # ============================================================================
