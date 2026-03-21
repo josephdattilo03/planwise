@@ -31,7 +31,7 @@ boards = [
     {
         "id": "bd_1",
         "user_id": "jdatt@sas.upenn.edu",
-        "path": "/work",
+        "path": "/root/work",
         "depth": 1,
         "name": "Work Board",
         "color": "#3b82f6"
@@ -39,7 +39,7 @@ boards = [
     {
         "id": "bd_2",
         "user_id": "jdatt@sas.upenn.edu",
-        "path": "/personal",
+        "path": "/root/personal",
         "depth": 1,
         "name": "Personal Board",
         "color": "#10b981"
@@ -47,7 +47,7 @@ boards = [
     {
         "id": "bd_3",
         "user_id": "jdatt@sas.upenn.edu",
-        "path": "/work/projects",
+        "path": "/root/work/projects",
         "depth": 2,
         "name": "Projects Board",
         "color": "#f59e0b"
@@ -55,7 +55,7 @@ boards = [
     {
         "id": "bd_7",
         "user_id": "usr_1",
-        "path": "/work/projects",
+        "path": "/root/work/projects",
         "depth": 2,
         "name": "Other Projects Board",
         "color": "#0000ff"
@@ -63,7 +63,7 @@ boards = [
     {
         "id": "bd_4",
         "user_id": "usr_2",
-        "path": "/home",
+        "path": "/root/home",
         "depth": 1,
         "name": "Home Board",
         "color": "#8b5cf6"
@@ -71,7 +71,7 @@ boards = [
     {
         "id": "bd_5",
         "user_id": "usr_2",
-        "path": "/home/fitness",
+        "path": "/root/home/fitness",
         "depth": 2,
         "name": "Fitness Board",
         "color": "#ec4899"
@@ -79,7 +79,7 @@ boards = [
     {
         "id": "bd_6",
         "user_id": "usr_3",
-        "path": "/archive",
+        "path": "/root/archive",
         "depth": 1,
         "name": "Archive Board",
         "color": "#6366f1"
@@ -89,53 +89,95 @@ boards = [
 # Folder data
 folders = [
     {
+        "id": "root",
+        "user_id": "jdatt@sas.upenn.edu",
+        "path": "/root",
+        "depth": 0,
+        "name": "Root"
+    },
+    {
+        "id": "root",
+        "user_id": "usr_1",
+        "path": "/root",
+        "depth": 0,
+        "name": "Root"
+    },
+    {
+        "id": "root",
+        "user_id": "usr_2",
+        "path": "/root",
+        "depth": 0,
+        "name": "Root"
+    },
+    {
+        "id": "root",
+        "user_id": "usr_3",
+        "path": "/root",
+        "depth": 0,
+        "name": "Root"
+    },
+    {
         "id": "fld_1",
         "user_id": "jdatt@sas.upenn.edu",
-        "path": "/work",
+        "path": "/root/work",
         "depth": 1,
         "name": "Work"
     },
     {
         "id": "fld_2",
         "user_id": "jdatt@sas.upenn.edu",
-        "path": "/personal",
+        "path": "/root/personal",
         "depth": 1,
         "name": "Personal"
     },
     {
         "id": "fld_3",
         "user_id": "jdatt@sas.upenn.edu",
-        "path": "/work/projects",
+        "path": "/root/work/projects",
         "depth": 2,
         "name": "Projects"
     },
     {
         "id": "fld_7",
         "user_id": "jdatt@sas.upenn.edu",
-        "path": "/work/projects",
+        "path": "/root/work/projects",
         "depth": 2,
         "name": "Better Projects"
     },
     {
         "id": "fld_4",
-        "user_id": "jdatt@sas.upenn.edu",
-        "path": "/home",
+        "user_id": "usr_2",
+        "path": "/root/home",
         "depth": 1,
         "name": "Home"
     },
     {
         "id": "fld_5",
-        "user_id": "jdatt@sas.upenn.edu",
-        "path": "/home/fitness",
+        "user_id": "usr_2",
+        "path": "/root/home/fitness",
         "depth": 2,
         "name": "Fitness"
     },
     {
         "id": "fld_6",
-        "user_id": "jdatt@sas.upenn.edu",
-        "path": "/archive",
+        "user_id": "usr_3",
+        "path": "/root/archive",
         "depth": 1,
         "name": "Archive"
+    },
+    {
+        "id": "fld_8",
+        "user_id": "usr_1",
+        "path": "/root/work",
+        "depth": 1,
+        "name": "Work"
+    },
+    {
+        "id": "fld_9",
+        "user_id": "usr_1",
+        "path": "/root/work/projects",
+        "depth": 2,
+        "name": "Projects"
     }
 ]
 

@@ -334,6 +334,26 @@ Resources:
             Path: /user/{user_id}/folder/{id}
             Method: get
 
+  GetFoldersByUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: get_folders_by_user.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder
+            Method: get
+
   UpdateFolderFunction:
     Type: AWS::Serverless::Function
     Properties:
