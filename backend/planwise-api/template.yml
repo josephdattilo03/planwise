@@ -4,15 +4,26 @@ Description: >
   planwise-api
   SAM Template for Event Management API
 
+# ============================================================================
+# PARAMETERS
+# ============================================================================
+Parameters:
+  DynamoDBEndpoint:
+    Type: String
+    Default: ''
+    Description: 'DynamoDB endpoint URL for local development (leave empty for AWS)'
+
+# ============================================================================
+# GLOBALS
+# ============================================================================
 Globals:
   Function:
     Runtime: python3.13
     Architectures:
-      - x86_64
+      - arm64
     Timeout: 30
     Environment:
       Variables:
-        EVENTS_TABLE: events-table
         AWS_ENDPOINT_URL: !Ref DynamoDBEndpoint
   Api:
     Cors:
@@ -20,15 +31,13 @@ Globals:
       AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
       AllowOrigin: "'*'"
 
-Parameters:
-  DynamoDBEndpoint:
-    Type: String
-    Default: ""
-    Description: "DynamoDB endpoint URL for local development (leave empty for AWS)"
-
+# ============================================================================
+# RESOURCES
+# ============================================================================
 Resources:
-  # Lambda Layer for shared dependencies (pydantic, models)
-  # MOVED TO TOP to build first
+  # --------------------------------------------------------------------------
+  # Lambda Layers
+  # --------------------------------------------------------------------------
   DependenciesLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -37,215 +46,798 @@ Resources:
       ContentUri: layers/dependencies
       CompatibleRuntimes:
         - python3.13
+      CompatibleArchitectures:
+        - arm64
       RetentionPolicy: Delete
     Metadata:
       BuildMethod: makefile
+      BuildArchitecture: arm64
 
-  # DynamoDB Table for Events
-  EventsTable:
+  # --------------------------------------------------------------------------
+  # DynamoDB Tables
+  # --------------------------------------------------------------------------
+  EventTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: events-table
+      TableName: event-table
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: id
+        - AttributeName: PK
           AttributeType: S
-        - AttributeName: calendar_id
-          AttributeType: N
+        - AttributeName: SK
+          AttributeType: S
       KeySchema:
-        - AttributeName: id
+        - AttributeName: PK
           KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
+  FolderTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: folder-table
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
       GlobalSecondaryIndexes:
-        - IndexName: calendar_id-index
+        - IndexName: GSI1
           KeySchema:
-            - AttributeName: calendar_id
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  BoardTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: board-table
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  TagTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: tag-table
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
+  TaskTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: task-table
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
               KeyType: HASH
           Projection:
             ProjectionType: ALL
-            
-  CalendarsTable:
+
+
+  NoteTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: calendars-table
+      TableName: note-table
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: id
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
           AttributeType: S
       KeySchema:
-        - AttributeName: id
+        - AttributeName: PK
           KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
 
-  # Create Event Function
+  # --------------------------------------------------------------------------
+  # Event Functions
+  # --------------------------------------------------------------------------
   CreateEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/events/
+      CodeUri: functions/event/
       Handler: create_event.lambda_handler
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
+            TableName: !Ref EventTable
       Events:
         CreateEvent:
           Type: Api
           Properties:
-            Path: /events
+            Path: /board/event
             Method: post
 
-  # Get Event Function
   GetEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/events/
+      CodeUri: functions/event/
       Handler: get_event.lambda_handler
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref EventsTable
+            TableName: !Ref EventTable
       Events:
         GetEvent:
           Type: Api
           Properties:
-            Path: /events/{id}
+            Path: /board/{board_id}/event/{id}
             Method: get
 
-  # Update Event Function
-  UpdateEventFunction:
+  GetEventsByBoardFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/events/
-      Handler: update_event.lambda_handler
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
-      Events:
-        UpdateEvent:
-          Type: Api
-          Properties:
-            Path: /events/{id}
-            Method: put
-
-  # Delete Event Function
-  DeleteEventFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/events/
-      Handler: delete_event.lambda_handler
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref EventsTable
-      Events:
-        DeleteEvent:
-          Type: Api
-          Properties:
-            Path: /events/{id}
-            Method: delete
-
-  # Get Event by Date Range
-  GetDateRangeEvents:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar
-      Handler: get_calendar_events_by_date_range.lambda_handler
+      CodeUri: functions/event/
+      Handler: get_events_by_board.lambda_handler
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref EventsTable
+            TableName: !Ref EventTable
       Events:
-        GetDateRangeEvents:
+        GetEvent:
           Type: Api
           Properties:
-            Path: /calendars/{calendar_id}/events
+            Path: /board/{board_id}/event/
             Method: get
 
-  # Create Calendar Function
-  CreateCalendarFunction:
+  UpdateEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/calendar/
-      Handler: create_calendar.lambda_handler
+      CodeUri: functions/event/
+      Handler: update_event.lambda_handler
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
+            TableName: !Ref EventTable
       Events:
-        CreateCalendar:
+        UpdateEvent:
           Type: Api
           Properties:
-            Path: /calendars
-            Method: post
-  
-  # Get Calendar Function
-  GetCalendarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar/
-      Handler: get_calendar.lambda_handler
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
-      Events:
-        GetCalendar:
-          Type: Api
-          Properties:
-            Path: /calendars/{id}
-            Method: get
-  
-  # Update Calendar Function
-  UpdateCalendarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/calendar/
-      Handler: update_calendar.lambda_handler
-      Layers:
-        - !Ref DependenciesLayer
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
-      Events:
-        UpdateCalendar:
-          Type: Api
-          Properties:
-            Path: /calendars/{id}
+            Path: /board/{board_id}/event/{id}
             Method: put
 
-  # Delete Calendar Function
-  DeleteCalendarFunction:
+  DeleteEventFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: functions/calendar/
-      Handler: delete_calendar.lambda_handler
+      CodeUri: functions/event/
+      Handler: delete_event.lambda_handler
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref CalendarsTable
+            TableName: !Ref EventTable
       Events:
-        DeleteCalendar:
+        DeleteEvent:
           Type: Api
           Properties:
-            Path: /calendars/{id}
+            Path: /board/{board_id}/event/{id}
+            Method: delete
+  # --------------------------------------------------------------------------
+  # Folder Functions
+  # --------------------------------------------------------------------------
+
+  CreateFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: create_folder.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        CreateEvent:
+          Type: Api
+          Properties:
+            Path: /user/folder
+            Method: post
+
+  GetFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: get_folder.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder/{id}
+            Method: get
+
+  GetFoldersByUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: get_folders_by_user.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder
+            Method: get
+
+  UpdateFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: update_folder.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        UpdateEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder/{id}
+            Method: put
+
+  DeleteFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: delete_folder.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        DeleteEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder/{id}
             Method: delete
 
+  GetFoldersByDepthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: get_folders_by_depth.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder/{depth}/{path+}
+            Method: get
+  # --------------------------------------------------------------------------
+  # Board Functions
+  # --------------------------------------------------------------------------
+
+  CreateBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: create_board.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        CreateEvent:
+          Type: Api
+          Properties:
+            Path: /user/board
+            Method: post
+
+  GetBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: get_board.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/board/{id}
+            Method: get
+
+  GetBoardsByDepthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: get_boards_by_depth.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/board/{depth}/{path+}
+            Method: get
+  UpdateBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: update_board.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        UpdateEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/board/{id}
+            Method: put
+
+  DeleteBoardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: delete_board.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        DeleteEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/board/{id}
+            Method: delete
+
+  GetBoardsByUser:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/board/
+      Handler: get_boards_by_user.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref BoardTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        DeleteEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/board/
+            Method: get
+
+  # --------------------------------------------------------------------------
+  # Tag Functions
+  # --------------------------------------------------------------------------
+
+  CreateTagFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/tag/
+      Handler: create_tag.lambda_handler
+      Environment:
+        Variables:
+          TAG_TABLE: !Ref TagTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagTable
+      Events:
+        CreateTag:
+          Type: Api
+          Properties:
+            Path: /user/tag
+            Method: post
+
+  GetTagFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/tag/
+      Handler: get_tag.lambda_handler
+      Environment:
+        Variables:
+          TAG_TABLE: !Ref TagTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TagTable
+      Events:
+        GetTag:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/tag/{id}
+            Method: get
+
+  UpdateTagFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/tag/
+      Handler: update_tag.lambda_handler
+      Environment:
+        Variables:
+          TAG_TABLE: !Ref TagTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagTable
+      Events:
+        UpdateTag:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/tag/{id}
+            Method: put
+
+  DeleteTagFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/tag/
+      Handler: delete_tag.lambda_handler
+      Environment:
+        Variables:
+          TAG_TABLE: !Ref TagTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagTable
+      Events:
+        DeleteTag:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/tag/{id}
+            Method: delete
+  
+  GetTagsByUser:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/tag/
+      Handler: get_tags_by_user.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref TagTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagTable
+      Events:
+        DeleteEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/tag/
+            Method: get
+
+  # --------------------------------------------------------------------------
+  # Task Functions
+  # --------------------------------------------------------------------------
+
+  CreateTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/task/
+      Handler: create_task.lambda_handler
+      Environment:
+        Variables:
+          TASK_TABLE: !Ref TaskTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+      Events:
+        CreateTask:
+          Type: Api
+          Properties:
+            Path: /board/task
+            Method: post
+
+  GetTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/task/
+      Handler: get_task.lambda_handler
+      Environment:
+        Variables:
+          TASK_TABLE: !Ref TaskTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TaskTable
+      Events:
+        GetTask:
+          Type: Api
+          Properties:
+            Path: /board/{board_id}/task/{id}
+            Method: get
+
+  UpdateTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/task/
+      Handler: update_task.lambda_handler
+      Environment:
+        Variables:
+          TASK_TABLE: !Ref TaskTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+      Events:
+        UpdateTask:
+          Type: Api
+          Properties:
+            Path: /board/{board_id}/task/{id}
+            Method: put
+
+  DeleteTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/task/
+      Handler: delete_task.lambda_handler
+      Environment:
+        Variables:
+          TASK_TABLE: !Ref TaskTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+      Events:
+        DeleteTask:
+          Type: Api
+          Properties:
+            Path: /board/{board_id}/task/{id}
+            Method: delete
+
+    # --------------------------------------------------------------------------
+  # Note Functions
+  # --------------------------------------------------------------------------
+  CreateNoteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/note/
+      Handler: create_note.lambda_handler
+      Environment:
+        Variables:
+          NOTE_TABLE: !Ref NoteTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NoteTable
+      Events:
+        CreateNote:
+          Type: Api
+          Properties:
+            Path: /user/note
+            Method: post
+
+  GetNoteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/note/
+      Handler: get_note.lambda_handler
+      Environment:
+        Variables:
+          NOTE_TABLE: !Ref NoteTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref NoteTable
+      Events:
+        GetNote:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/note/{id}
+            Method: get
+
+  UpdateNoteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/note/
+      Handler: update_note.lambda_handler
+      Environment:
+        Variables:
+          NOTE_TABLE: !Ref NoteTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NoteTable
+      Events:
+        UpdateNote:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/note/{id}
+            Method: put
+
+  DeleteNoteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/note/
+      Handler: delete_note.lambda_handler
+      Environment:
+        Variables:
+          NOTE_TABLE: !Ref NoteTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NoteTable
+      Events:
+        DeleteNote:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/note/{id}
+            Method: delete
+
+  GetTaskByUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/task/
+      Handler: get_tasks_by_user.lambda_handler
+      Environment:
+        Variables:
+          TASK_TABLE: !Ref TaskTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TaskTable
+      Events:
+        GetTask:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/task/
+            Method: get
+# ============================================================================
+# OUTPUTS
+# ============================================================================
 Outputs:
   ApiEndpoint:
-    Description: "API Gateway endpoint URL for Prod stage"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
-  
-  EventsTableName:
-    Description: "DynamoDB table name for events"
-    Value: !Ref EventsTable
-  
+    Description: 'API Gateway endpoint URL for Prod stage'
+    Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/'
+
+  EventTableName:
+    Description: 'DynamoDB table name for event'
+    Value: !Ref EventTable
+
   CreateEventFunctionArn:
-    Description: "Create Event Lambda Function ARN"
+    Description: 'Create Event Lambda Function ARN'
     Value: !GetAtt CreateEventFunction.Arn

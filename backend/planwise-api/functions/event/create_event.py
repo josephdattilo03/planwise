@@ -1,0 +1,44 @@
+import json
+from uuid import uuid4
+
+from aws_lambda_typing import context as lambda_context
+from aws_lambda_typing import events as lambda_events
+from aws_lambda_typing.responses import APIGatewayProxyResponseV2
+from pydantic import ValidationError
+from shared.models.event import Event
+from shared.services.event_service import EventService
+from shared.utils.errors import ValidationAppError
+from shared.utils.lambda_error_wrapper import lambda_http_handler
+
+@lambda_http_handler
+def lambda_handler(
+    event: lambda_events.APIGatewayProxyEventV2, context: lambda_context.Context
+) -> APIGatewayProxyResponseV2:
+    service = EventService()
+
+    if not event.get("body"):
+        raise ValidationAppError()
+
+    body = json.loads(event.get("body"))
+    if not body.get("id"):
+        body["id"] = str(uuid4())
+
+
+    try:
+        event_obj = Event(**body)
+        service.create_event(event_obj)
+    except ValidationError as e:
+        raise ValidationAppError(e.errors())
+        
+
+
+    return {
+        "statusCode": 201,
+        "body": json.dumps(
+            {
+                "message": "Event created successfully",
+                "event_id": event_obj.id,
+            }
+        ),
+    }
+

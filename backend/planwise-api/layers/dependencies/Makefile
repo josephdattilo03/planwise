@@ -1,11 +1,11 @@
 build-DependenciesLayer:
 	mkdir -p "$(ARTIFACTS_DIR)/python"
-	cp -r python/shared "$(ARTIFACTS_DIR)/python/"
 	pip install \
-		--platform manylinux2014_x86_64 \
 		--target "$(ARTIFACTS_DIR)/python/" \
+		--platform manylinux2014_aarch64 \
 		--implementation cp \
 		--python-version 3.13 \
 		--only-binary=:all: \
-		--upgrade \
+		--no-cache-dir \
 		-r requirements.txt
+	cp -r python/shared "$(ARTIFACTS_DIR)/python/"
