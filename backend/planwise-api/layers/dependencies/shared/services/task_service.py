@@ -1,3 +1,5 @@
+from typing import List
+
 from shared.models.task import Task
 from shared.repositories.task_repository import TaskRepository
 from typing import Any
@@ -10,6 +12,12 @@ class TaskService:
         self.repository = TaskRepository()
         self.gsi1_index = "GSI1"
         self.gsi1_pk = "GSI1PK"
+
+    def get_tasks_by_board(self, board_id: str) -> List[Task]:
+        """Get all tasks for a board."""
+        pk = f"BOARD#{board_id}"
+        items = self.repository.get_pk_list(pk)
+        return [Task(**item) for item in items]
 
     def create_task(self, task: Task) -> Task:
         """Create a new task"""

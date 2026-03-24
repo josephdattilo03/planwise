@@ -1,5 +1,6 @@
 # Please use pydantic model validation
 from datetime import date
+import datetime
 from typing import List, Literal, Optional
 
 from pydantic import BaseModel, FieldSerializationInfo, computed_field, field_serializer
@@ -27,8 +28,8 @@ class Recurrence(BaseModel):
 class Event(BaseModel):
     id: str
     board_id: str
-    start_time: date
-    end_time: date
+    start_time: datetime.datetime
+    end_time: datetime.datetime
     event_color: str
     is_all_day: bool
     description: str

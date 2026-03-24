@@ -242,6 +242,9 @@ $RECYCLE.BIN/
 */build/*
 /.aws-sam
 
+# Environment variables
+env.json
+
 # Same Google OAuth client as planwise-ui `.env.local` — do not commit
 sam-local-env.json
 

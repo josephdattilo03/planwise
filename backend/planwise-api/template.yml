@@ -29,6 +29,11 @@ Parameters:
     Type: String
     Default: 'http://localhost:3000/auth/success'
     Description: 'Frontend URL to redirect to after OAuth success'
+  OpenAIApiKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: 'OpenAI API key for the schedule agent (required for schedule agent Lambda)'
 
 # ============================================================================
 # GLOBALS
@@ -568,6 +573,37 @@ Resources:
           Properties:
             Path: /user/{user_id}/board/
             Method: get
+
+  # --------------------------------------------------------------------------
+  # Schedule Agent Function
+  # --------------------------------------------------------------------------
+  ScheduleAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/schedule_agent/
+      Handler: schedule_agent.lambda_handler
+      Timeout: 60
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
+          TASK_TABLE: !Ref TaskTable
+          BOARD_TABLE: !Ref BoardTable
+          OPENAI_API_KEY: !Ref OpenAIApiKey
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        ScheduleAgent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/schedule/agent
+            Method: post
 
   # --------------------------------------------------------------------------
   # Tag Functions

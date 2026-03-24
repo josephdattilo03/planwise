@@ -153,37 +153,7 @@ start-api:
 		echo "ERROR: .aws-sam/build directory not found. Run 'make build-sam' first."; \
 		exit 1; \
 	fi
-	@test -f sam-local-env.json || echo "Warning: sam-local-env.json missing — Google OAuth lambdas may fail without credentials."
-	@if [ -f sam-local-env.json ]; then \
-		DOCKER_API_VERSION=1.44 sam local start-api --port 3001 --warm-containers LAZY --skip-pull-image --env-vars sam-local-env.json; \
-	else \
-		DOCKER_API_VERSION=1.44 sam local start-api --port 3001 --warm-containers LAZY --skip-pull-image; \
-	fi
-
-start-api-eager:
-	@echo "Starting SAM Local API (EAGER warm containers)..."
-	@if [ ! -d ".aws-sam/build" ]; then \
-		echo "ERROR: .aws-sam/build directory not found. Run 'make build-sam' first."; \
-		exit 1; \
-	fi
-	@test -f sam-local-env.json || echo "Warning: sam-local-env.json missing — Google OAuth lambdas may fail without credentials."
-	@if [ -f sam-local-env.json ]; then \
-		DOCKER_API_VERSION=1.44 sam local start-api --port 3001 --warm-containers EAGER --skip-pull-image --env-vars sam-local-env.json; \
-	else \
-		DOCKER_API_VERSION=1.44 sam local start-api --port 3001 --warm-containers EAGER --skip-pull-image; \
-	fi
-
-start-api-debug:
-	@echo "Starting SAM Local API (LAZY + SAM debug log)..."
-	@if [ ! -d ".aws-sam/build" ]; then \
-		echo "ERROR: .aws-sam/build directory not found. Run 'make build-sam' first."; \
-		exit 1; \
-	fi
-	@if [ -f sam-local-env.json ]; then \
-		DOCKER_API_VERSION=1.44 sam local start-api --port 3001 --warm-containers LAZY --skip-pull-image --env-vars sam-local-env.json --debug; \
-	else \
-		DOCKER_API_VERSION=1.44 sam local start-api --port 3001 --warm-containers LAZY --skip-pull-image --debug; \
-	fi
+	SAM_CLI_PARALLEL=false sam local start-api --env-vars env.json --port 3001
 
 # ------------------------
 # Cleanup
