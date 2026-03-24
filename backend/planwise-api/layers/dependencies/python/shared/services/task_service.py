@@ -12,15 +12,12 @@ class TaskService:
         self.repository = TaskRepository()
         self.gsi1_index = "GSI1"
         self.gsi1_pk = "GSI1PK"
-<<<<<<< HEAD
 
     def get_tasks_by_board(self, board_id: str) -> List[Task]:
         """Get all tasks for a board."""
         pk = f"BOARD#{board_id}"
         items = self.repository.get_pk_list(pk)
         return [Task(**item) for item in items]
-=======
->>>>>>> f08773e11c63daa3f28a54dba44af9f24d644519
 
     def create_task(self, task: Task) -> Task:
         """Create a new task"""
