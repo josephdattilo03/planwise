@@ -137,7 +137,11 @@ start-api:
 		echo "ERROR: .aws-sam/build directory not found. Run 'make build-sam' first."; \
 		exit 1; \
 	fi
+<<<<<<< HEAD
 	SAM_CLI_PARALLEL=false sam local start-api --env-vars env.json --port 3001
+=======
+	SAM_CLI_PARALLEL=false sam local start-api --port 3001
+>>>>>>> f08773e11c63daa3f28a54dba44af9f24d644519
 
 # ------------------------
 # Cleanup

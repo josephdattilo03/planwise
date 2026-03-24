@@ -1,7 +1,11 @@
 from shared.repositories.folder_repository import FolderRepository
 from shared.models.folder import Folder
 from typing import Optional, Any, List
+<<<<<<< HEAD
 from shared.utils.errors import NotFoundError, ValidationAppError
+=======
+from shared.utils.errors import ValidationAppError
+>>>>>>> f08773e11c63daa3f28a54dba44af9f24d644519
 from pydantic import ValidationError
 
 class FolderService:
@@ -16,6 +20,7 @@ class FolderService:
         self.root_folder_depth = 0
     
     def ensure_root_folder(self, user_id: str) -> Folder:
+<<<<<<< HEAD
         try:
             existing = self.repository.get_by_id_pair(
                 f"USER#{user_id}", f"FOLDER#{self.root_folder_id}"
@@ -27,6 +32,14 @@ class FolderService:
             root = self._item_to_folder(existing)
             if root:
                 return root
+=======
+        existing = self.repository.get_by_id_pair(
+            f"USER#{user_id}", f"FOLDER#{self.root_folder_id}"
+        )
+        root = self._item_to_folder(existing)
+        if root:
+            return root
+>>>>>>> f08773e11c63daa3f28a54dba44af9f24d644519
 
         root = Folder(
             id=self.root_folder_id,
