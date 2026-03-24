@@ -12,6 +12,11 @@ Parameters:
     Type: String
     Default: ''
     Description: 'DynamoDB endpoint URL for local development (leave empty for AWS)'
+  OpenAIApiKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: 'OpenAI API key for the schedule agent (required for schedule agent Lambda)'
 
 # ============================================================================
 # GLOBALS
@@ -156,11 +161,21 @@ Resources:
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
 
   NoteTable:
     Type: AWS::DynamoDB::Table
@@ -322,6 +337,26 @@ Resources:
           Type: Api
           Properties:
             Path: /user/{user_id}/folder/{id}
+            Method: get
+
+  GetFoldersByUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: get_folders_by_user.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref FolderTable
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder
             Method: get
 
   UpdateFolderFunction:
@@ -507,6 +542,37 @@ Resources:
             Method: get
 
   # --------------------------------------------------------------------------
+  # Schedule Agent Function
+  # --------------------------------------------------------------------------
+  ScheduleAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/schedule_agent/
+      Handler: schedule_agent.lambda_handler
+      Timeout: 60
+      Environment:
+        Variables:
+          EVENT_TABLE: !Ref EventTable
+          TASK_TABLE: !Ref TaskTable
+          BOARD_TABLE: !Ref BoardTable
+          OPENAI_API_KEY: !Ref OpenAIApiKey
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        ScheduleAgent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/schedule/agent
+            Method: post
+
+  # --------------------------------------------------------------------------
   # Tag Functions
   # --------------------------------------------------------------------------
 
@@ -589,6 +655,26 @@ Resources:
           Properties:
             Path: /user/{user_id}/tag/{id}
             Method: delete
+  
+  GetTagsByUser:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/tag/
+      Handler: get_tags_by_user.lambda_handler
+      Environment:
+        Variables:
+          BOARD_TABLE: !Ref TagTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TagTable
+      Events:
+        DeleteEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/tag/
+            Method: get
 
   # --------------------------------------------------------------------------
   # Task Functions
@@ -756,6 +842,26 @@ Resources:
           Properties:
             Path: /user/{user_id}/note/{id}
             Method: delete
+
+  GetTaskByUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/task/
+      Handler: get_tasks_by_user.lambda_handler
+      Environment:
+        Variables:
+          TASK_TABLE: !Ref TaskTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TaskTable
+      Events:
+        GetTask:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/task/
+            Method: get
 # ============================================================================
 # OUTPUTS
 # ============================================================================

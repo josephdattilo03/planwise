@@ -242,4 +242,7 @@ $RECYCLE.BIN/
 */build/*
 /.aws-sam
 
+# Environment variables
+env.json
+
 # End of https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode

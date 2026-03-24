@@ -13,6 +13,7 @@ iniconfig==2.3.0
 jmespath==1.0.1
 mypy-boto3-dynamodb==1.40.56
 nodeenv==1.9.1
+openai==1.55.3
 packaging==25.0
 platformdirs==4.5.0
 pluggy==1.6.0
