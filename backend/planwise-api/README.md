@@ -1,5 +1,33 @@
 # planwise-api
 
+## Local run without `make` (PowerShell + Docker + Postman)
+
+1. Set Google OAuth env vars in PowerShell:
+```powershell
+$env:GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+$env:GOOGLE_CLIENT_SECRET="your-google-client-secret"
+```
+
+2. Start local stack (DynamoDB + table creation + SAM build + API):
+```powershell
+.\scripts\local-dev.ps1 -Action all
+```
+
+3. For iterative development:
+```powershell
+.\scripts\local-dev.ps1 -Action up
+.\scripts\local-dev.ps1 -Action tables
+.\scripts\local-dev.ps1 -Action build
+.\scripts\local-dev.ps1 -Action api
+```
+
+4. Stop local services:
+```powershell
+.\scripts\local-dev.ps1 -Action down
+```
+
+Base local API URL for Postman: `http://127.0.0.1:3000`
+
 This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
 
 - hello_world - Code for the application's Lambda function.

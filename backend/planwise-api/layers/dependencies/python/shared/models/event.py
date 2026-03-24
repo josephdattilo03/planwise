@@ -2,7 +2,7 @@
 from datetime import date
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, FieldSerializationInfo, field_serializer, computed_field
+from pydantic import BaseModel, FieldSerializationInfo, computed_field, field_serializer
 
 
 class Recurrence(BaseModel):
@@ -36,15 +36,13 @@ class Event(BaseModel):
     recurrence: Optional[Recurrence]
 
     @field_serializer("start_time", "end_time")
-    def serialize_date(
-        self, value: date, _info: FieldSerializationInfo
-    ) -> str:
+    def serialize_date(self, value: date, _info: FieldSerializationInfo) -> str:
         return value.isoformat()
-    
-    @computed_field
-    @property
-    def PK(self) -> str: return f"BOARD#{self.board_id}"
 
     @computed_field
-    @property
-    def SK(self) -> str: return f"EVENT#{self.id}"
+    def PK(self) -> str:
+        return f"BOARD#{self.board_id}"
+
+    @computed_field
+    def SK(self) -> str:
+        return f"EVENT#{self.id}"

@@ -1,11 +1,27 @@
 # shared/utils/lambda_wrapper.py
 
 import json
+from typing import Callable
+
+from aws_lambda_typing import context as lambda_context
+from aws_lambda_typing import events as lambda_events
+from aws_lambda_typing.responses import APIGatewayProxyResponseV2
 from shared.utils.errors import AppError
 
 
-def lambda_http_handler(fn):
-    def wrapper(event, context):
+def lambda_http_handler(
+    fn: Callable[
+        [lambda_events.APIGatewayProxyEventV2, lambda_context.Context],
+        APIGatewayProxyResponseV2,
+    ],
+) -> Callable[
+    [lambda_events.APIGatewayProxyEventV2, lambda_context.Context],
+    APIGatewayProxyResponseV2,
+]:
+    def wrapper(
+        event: lambda_events.APIGatewayProxyEventV2,
+        context: lambda_context.Context,
+    ) -> APIGatewayProxyResponseV2:
         try:
             return fn(event, context)
 
