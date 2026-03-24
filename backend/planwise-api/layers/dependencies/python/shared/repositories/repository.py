@@ -54,9 +54,8 @@ class Repository:
         query_kwargs: dict[str, Any] = {"KeyConditionExpression": Key(pk_attr).eq(pk)}
 
         if sk_prefix:
-            query_kwargs["KeyConditionExpression"] &= Key(sk_attr).begins_with(
-                sk_prefix
-            )
+            sk = sk_attr or "SK"
+            query_kwargs["KeyConditionExpression"] &= Key(sk).begins_with(sk_prefix)
 
         if index_name:
             query_kwargs["IndexName"] = index_name

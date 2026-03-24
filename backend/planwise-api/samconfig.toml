@@ -23,8 +23,10 @@ resolve_s3 = true
 [default.sync.parameters]
 watch = true
 
+# LAZY: API is ready immediately; each function’s Docker image builds on first use.
+# EAGER preloads every function at startup and can stall for many minutes.
 [default.local_start_api.parameters]
-warm_containers = "EAGER"
+warm_containers = "LAZY"
 
 [default.local_start_lambda.parameters]
-warm_containers = "EAGER"
+warm_containers = "LAZY"

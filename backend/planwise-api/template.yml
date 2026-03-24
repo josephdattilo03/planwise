@@ -23,8 +23,8 @@ Parameters:
     Description: 'Google OAuth client secret'
   GoogleRedirectUri:
     Type: String
-    Default: 'http://127.0.0.1:3000/auth/callback'
-    Description: 'Google OAuth callback URL handled by this API'
+    Default: 'http://localhost:3001/auth/callback'
+    Description: 'Google OAuth callback URL handled by this API (SAM local default port; must match Google Cloud if using /auth/google)'
   FrontendAuthSuccessUri:
     Type: String
     Default: 'http://localhost:3000/auth/success'
