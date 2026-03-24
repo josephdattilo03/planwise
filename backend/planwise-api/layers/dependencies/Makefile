@@ -8,4 +8,4 @@ build-DependenciesLayer:
 		--only-binary=:all: \
 		--no-cache-dir \
 		-r requirements.txt
-	cp -r python/shared "$(ARTIFACTS_DIR)/python/"
+	cp -r shared "$(ARTIFACTS_DIR)/python/"

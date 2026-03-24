@@ -242,4 +242,7 @@ $RECYCLE.BIN/
 */build/*
 /.aws-sam
 
+# Same Google OAuth client as planwise-ui `.env.local` — do not commit
+sam-local-env.json
+
 # End of https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode

@@ -96,6 +96,7 @@ def list_calendar_events(
     time_min: str,
     time_max: str,
 ) -> list[dict[str, Any]]:
+    """Calendar API v3 events.list (server-side)."""
     base = "https://www.googleapis.com/calendar/v3/calendars"
     cal = quote(calendar_id, safe="")
     url = f"{base}/{cal}/events"

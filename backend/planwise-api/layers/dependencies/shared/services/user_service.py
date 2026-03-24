@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Any, List
 
 from pydantic import ValidationError
@@ -6,12 +7,24 @@ from shared.repositories.user_repository import UserRepository
 from shared.utils.errors import NotFoundError, ValidationAppError
 
 
+def _dynamo_to_plain(value: Any) -> Any:
+    """DynamoDB returns numbers as Decimal; Pydantic int fields need native ints."""
+    if isinstance(value, Decimal):
+        return int(value) if value % 1 == 0 else float(value)
+    if isinstance(value, dict):
+        return {k: _dynamo_to_plain(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_dynamo_to_plain(v) for v in value]
+    return value
+
+
 class UserService:
     def __init__(self) -> None:
         self.repository = UserRepository()
 
     def create_user(self, user: User) -> User:
-        user_dict = user.model_dump()
+        # mode="json" so dates are ISO strings — DynamoDB does not accept Python date objects.
+        user_dict = user.model_dump(mode="json")
         self.repository.save(user_dict)
         return user
 
@@ -29,7 +42,7 @@ class UserService:
         return [self._item_to_user(item) for item in items]
 
     def update_user(self, user: User) -> User:
-        user_dict = user.model_dump()
+        user_dict = user.model_dump(mode="json")
         self.repository.update_by_id_pair(user_dict)
         return user
 
@@ -38,7 +51,7 @@ class UserService:
 
     def _item_to_user(self, item: dict[str, Any]) -> User:
         try:
-            user = User(**item)
+            user = User(**_dynamo_to_plain(item))
         except ValidationError as e:
             raise ValidationAppError(e.errors())
         return user

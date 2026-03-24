@@ -563,7 +563,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref BoardTable
       Events:
-        DeleteEvent:
+        GetBoardsByUser:
           Type: Api
           Properties:
             Path: /user/{user_id}/board/
@@ -990,7 +990,7 @@ Resources:
             Method: get
 
   # --------------------------------------------------------------------------
-  # Google Calendar Import Function
+  # Google Calendar import (server calls Google; Next.js proxies with OAuth tokens)
   # --------------------------------------------------------------------------
   ImportGoogleCalendarFunction:
     Type: AWS::Serverless::Function
@@ -1014,7 +1014,7 @@ Resources:
         ImportGoogleCalendar:
           Type: Api
           Properties:
-            Path: /user/{user_id}/board/{board_id}/import-calendar
+            Path: /user/{user_id}/import-calendar
             Method: post
 
 # ============================================================================

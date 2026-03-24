@@ -24,21 +24,14 @@ class EventService:
             for event in events:
                 if event.start_time > event.end_time:
                     raise InvalidEventTimeError()
-                event_dict = event.model_dump()
-                if event.recurrence is not None:
-                    event_dict["recurrence"] = event.recurrence.model_dump()
-                batch.put_item(Item=event_dict)
+                # mode="json" so dates and nested models are plain JSON types; DynamoDB rejects Python date objects.
+                batch.put_item(Item=event.model_dump(mode="json"))
 
     def create_event(self, event: Event) -> Event:
         if event.start_time > event.end_time:
             raise InvalidEventTimeError()
 
-        event_dict = event.model_dump()
-
-        if event.recurrence is not None:
-            event_dict["recurrence"] = event.recurrence.model_dump()
-
-        self.repository.save(event_dict)
+        self.repository.save(event.model_dump(mode="json"))
         return event
 
     def get_event_by_id(self, event_id: str, board_id: str) -> Optional[Event]:
@@ -52,12 +45,7 @@ class EventService:
     def update_event(self, event: Event) -> Event:
         if event.start_time > event.end_time:
             raise InvalidEventTimeError()
-        
-
-        event_dict = event.model_dump()
-        if event.recurrence is not None:
-            event_dict["recurrence"] = event.recurrence.model_dump()
-        self.repository.update_by_id_pair(event_dict)
+        self.repository.update_by_id_pair(event.model_dump(mode="json"))
         return event
 
     def delete_event(self, event_id: str, board_id: str):

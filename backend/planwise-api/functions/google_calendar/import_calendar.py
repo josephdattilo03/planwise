@@ -30,6 +30,10 @@ from shared.utils.lambda_error_wrapper import lambda_http_handler
 DEFAULT_GOOGLE_COLOR = "#4285F4"
 
 
+def _google_board_id_for_user(user_id: str) -> str:
+    return f"gcal:{user_id}"
+
+
 def _google_event_id(ge: dict[str, Any]) -> str:
     gid = ge.get("id") or uuid4().hex
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in str(gid))[:180]
@@ -144,9 +148,9 @@ def lambda_handler(
 
     path = event.get("pathParameters") or {}
     user_id = path.get("user_id")
-    board_id = path.get("board_id")
-    if not user_id or not board_id:
+    if not user_id:
         raise BadRequestError()
+    board_id = _google_board_id_for_user(user_id)
 
     qs = event.get("queryStringParameters") or {}
     calendar_id = qs.get("calendar_id")
@@ -195,6 +199,13 @@ def lambda_handler(
         )
     except requests.HTTPError:
         raise GoogleCalendarAuthError()
+    except requests.RequestException as e:
+        return {
+            "statusCode": 502,
+            "body": json.dumps(
+                {"error": f"Google Calendar request failed: {str(e)}"}
+            ),
+        }
 
     existing_ids = event_service.get_google_calendar_event_ids(board_id)
 
