@@ -47,8 +47,8 @@ class Repository:
         pk: str,
         sk_prefix: Optional[str] = None,
         pk_attr: str = "PK",
-        sk_attr: str = "SK",
-        index_name: Optional[str] = None,
+        sk_attr: Optional[str] = None,
+        index_name: Optional[str] = None
     ) -> List[dict[str, Any]]:
 
         query_kwargs: dict[str, Any] = {"KeyConditionExpression": Key(pk_attr).eq(pk)}

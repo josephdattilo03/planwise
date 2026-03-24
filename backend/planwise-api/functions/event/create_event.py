@@ -1,4 +1,5 @@
 import json
+from uuid import uuid4
 
 from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
@@ -19,6 +20,8 @@ def lambda_handler(
         raise ValidationAppError()
 
     body = json.loads(event.get("body"))
+    if not body.get("id"):
+        body["id"] = str(uuid4())
 
 
     try:
