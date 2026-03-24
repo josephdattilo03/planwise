@@ -1,0 +1,8 @@
+{
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/layers/dependencies/python"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/layers/dependencies/python"
+  ]
+}

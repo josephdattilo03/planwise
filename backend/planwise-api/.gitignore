@@ -242,4 +242,7 @@ $RECYCLE.BIN/
 */build/*
 /.aws-sam
 
+# Manual deploy: make zip-lambda-deployments
+/lambda-zips/
+
 # End of https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode

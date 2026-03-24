@@ -1,4 +1,4 @@
-.PHONY: start-local start-dynamodb create-tables build-sam start-api stop clean health-check
+.PHONY: start-local start-dynamodb create-tables build-sam zip-lambda-deployments deploy-aws deploy-aws-upload start-api stop clean health-check
 
 AWS_ENDPOINT=http://localhost:8000
 AWS_REGION=us-east-1
@@ -127,6 +127,52 @@ build-sam:
 	@echo "Building SAM application..."
 	@sam build
 	@echo "SAM build complete"
+
+# Zip each artifact under .aws-sam/build/ into lambda-zips/<Name>.zip for manual Lambda uploads.
+# Run `sam build` or `make build-sam` first. Use `sam build --use-container` for arm64 parity with AWS.
+LAMBDA_ZIPS_DIR := lambda-zips
+SAM_BUILD_DIR := .aws-sam/build
+
+zip-lambda-deployments:
+	@if [ ! -d "$(SAM_BUILD_DIR)" ]; then \
+		echo "ERROR: $(SAM_BUILD_DIR) not found. Run 'sam build' or 'make build-sam' first."; \
+		exit 1; \
+	fi
+	@rm -rf $(LAMBDA_ZIPS_DIR)
+	@mkdir -p $(LAMBDA_ZIPS_DIR)
+	@echo "Writing zips to $(LAMBDA_ZIPS_DIR)/"
+	@for d in $(SAM_BUILD_DIR)/*/; do \
+		[ -d "$$d" ] || continue; \
+		name=$$(basename "$$d"); \
+		echo "  $$name.zip"; \
+		( cd "$$d" && zip -q -r "$(CURDIR)/$(LAMBDA_ZIPS_DIR)/$$name.zip" . -x "*.pyc" -x "*__pycache__*" ); \
+	done
+	@echo "Done."
+
+# ------------------------
+# Deploy Lambda zips to AWS (AWS CLI required)
+# ------------------------
+# One-shot: sam build + zip + publish layer + update every function + attach new layer version.
+#   make deploy-aws
+# Upload only (reuse existing lambda-zips/):
+#   make deploy-aws-upload
+#
+# Lambda names must exist and equal $(DEPLOY_FUNCTION_PREFIX)<ZipBaseName>, e.g. CreateEventFunction.zip -> CreateEventFunction
+# or DEPLOY_FUNCTION_PREFIX=planwise-api- -> planwise-api-CreateEventFunction
+#
+# Optional: LAMBDA_LAYER_NAME DEPLOY_FUNCTION_PREFIX AWS_REGION AWS_PROFILE
+LAMBDA_LAYER_NAME ?= planwise-api-dependencies
+DEPLOY_FUNCTION_PREFIX ?=
+
+deploy-aws: build-sam zip-lambda-deployments deploy-aws-upload
+
+deploy-aws-upload:
+	@echo "Deploying from $(CURDIR)/$(LAMBDA_ZIPS_DIR) (region=$(AWS_REGION), layer=$(LAMBDA_LAYER_NAME), prefix='$(DEPLOY_FUNCTION_PREFIX)')"
+	@export AWS_REGION="$(AWS_REGION)"; \
+	export LAMBDA_ZIPS_DIR="$(CURDIR)/$(LAMBDA_ZIPS_DIR)"; \
+	export LAMBDA_LAYER_NAME="$(LAMBDA_LAYER_NAME)"; \
+	export DEPLOY_FUNCTION_PREFIX="$(DEPLOY_FUNCTION_PREFIX)"; \
+	bash "$(CURDIR)/scripts/deploy_lambda_zips.sh"
 
 # ------------------------
 # SAM Local API

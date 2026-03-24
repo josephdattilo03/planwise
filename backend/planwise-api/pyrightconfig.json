@@ -1,0 +1,4 @@
+{
+  "extraPaths": ["./layers/dependencies/python"],
+  "pythonVersion": "3.13"
+}
