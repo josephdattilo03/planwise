@@ -17,6 +17,18 @@ from shared.utils.errors import BadRequestError
 from shared.utils.lambda_error_wrapper import lambda_http_handler
 
 
+def _require_ascii_api_key(api_key: str) -> None:
+    """OpenAI keys are ASCII; stray Unicode in env (e.g. copy-paste) breaks HTTP headers."""
+    try:
+        api_key.encode("ascii")
+    except UnicodeEncodeError as e:
+        raise ValueError(
+            "OPENAI_API_KEY must be ASCII-only. Replace the key in env.json — "
+            "corrupted or non-English characters (often at the spot mentioned in the error) "
+            "cause 'ascii' codec errors when calling OpenAI."
+        ) from e
+
+
 def _handle_execute_plan(
     user_id: str,
     execute_plan: list[dict[str, Any]],
@@ -55,11 +67,18 @@ def lambda_handler(
     event: lambda_events.APIGatewayProxyEventV2,
     context: lambda_context.Context,
 ) -> APIGatewayProxyResponseV2:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
+    api_key = os.environ.get("OPENAI_API_KEY") or ""
+    if not api_key.strip():
         return {
             "statusCode": 500,
             "body": json.dumps({"error": "OPENAI_API_KEY not configured"}),
+        }
+    try:
+        _require_ascii_api_key(api_key)
+    except ValueError as ve:
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": str(ve)}),
         }
 
     path_params = event.get("pathParameters") or {}
@@ -70,7 +89,7 @@ def lambda_handler(
     if not event.get("body"):
         raise BadRequestError()
 
-    body = json.loads(event["body"])
+    body = json.loads(event.get("body") or "")
     plan_only = body.get("plan_only") is True
     execute_plan = body.get("execute_plan")
 
@@ -83,10 +102,21 @@ def lambda_handler(
         raise BadRequestError()
 
     board_ids = body.get("board_ids")  # optional list of board ids to scope context
+    user_timezone = body.get("timezone")
+    user_local_date = body.get("user_local_date")
+    if user_timezone is not None and not isinstance(user_timezone, str):
+        user_timezone = None
+    if user_local_date is not None and not isinstance(user_local_date, str):
+        user_local_date = None
 
     try:
         result = run_schedule_agent_llm(
-            user_id, message, plan_only=plan_only, board_ids=board_ids
+            user_id,
+            message,
+            plan_only=plan_only,
+            board_ids=board_ids,
+            user_timezone=user_timezone,
+            user_local_date=user_local_date,
         )
     except RuntimeError:
         return {

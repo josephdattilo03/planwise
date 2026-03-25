@@ -10,10 +10,12 @@ from shared.services.schedule_agent_context import build_schedule_context
 from shared.services.schedule_agent_tools import (
     SCHEDULE_AGENT_TOOLS,
     WRITE_TOOL_NAMES,
+    enrich_write_arguments,
     execute_tool,
+    preview_write_tool,
 )
 
-MAX_TOOL_ROUNDS = 10
+MAX_TOOL_ROUNDS = 24
 
 
 def run_schedule_agent_llm(
@@ -22,6 +24,8 @@ def run_schedule_agent_llm(
     *,
     plan_only: bool,
     board_ids: list[Any] | None = None,
+    user_timezone: str | None = None,
+    user_local_date: str | None = None,
 ) -> dict[str, Any]:
     """
     Run one schedule-agent conversation turn. Returns a dict suitable for JSON response body:
@@ -39,10 +43,17 @@ def run_schedule_agent_llm(
         else:
             normalized_board_ids = [str(b) for b in board_ids]
 
-    context_data = build_schedule_context(user_id, normalized_board_ids)
+    context_data = build_schedule_context(
+        user_id,
+        normalized_board_ids,
+        user_timezone=user_timezone,
+        user_local_date=user_local_date,
+    )
     context_json = json.dumps(context_data, indent=2)
+    cal = context_data.get("calendar") or {}
+    tz_for_prompt = str(cal.get("timezone") or "UTC")
     system_prompt = build_schedule_agent_system_prompt(
-        context_json, timezone="UTC", plan_only=plan_only
+        context_json, timezone=tz_for_prompt, plan_only=plan_only
     )
 
     client = OpenAI(api_key=api_key)
@@ -60,6 +71,7 @@ def run_schedule_agent_llm(
             messages=messages,
             tools=SCHEDULE_AGENT_TOOLS,
             tool_choice="auto",
+            parallel_tool_calls=True,
         )
         choice = response.choices[0]
         msg = choice.message
@@ -91,8 +103,9 @@ def run_schedule_agent_llm(
                 except json.JSONDecodeError:
                     args = {}
                 if plan_only and name in WRITE_TOOL_NAMES:
+                    args = enrich_write_arguments(name, args)
                     proposed_actions.append({"tool": name, "arguments": args})
-                    result = "Recorded for confirmation. No changes applied yet."
+                    result = preview_write_tool(name, args, user_id)
                 else:
                     result = execute_tool(name, args, user_id)
                 messages.append(
