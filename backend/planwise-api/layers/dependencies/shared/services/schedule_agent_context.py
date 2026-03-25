@@ -17,14 +17,9 @@ from shared.services.task_service import TaskService
 def _parse_user_local_date(s: Optional[str]) -> Optional[date]:
     if not s or not isinstance(s, str):
         return None
-    s = s.strip()
     try:
-        parts = s.split("-")
-        if len(parts) != 3:
-            return None
-        y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
-        return date(y, m, d)
-    except (ValueError, TypeError):
+        return date.fromisoformat(s.strip()[:10])
+    except ValueError:
         return None
 
 
@@ -112,11 +107,6 @@ def build_schedule_context(
             "timezone": tz_label,
             "resolved_from": tz_source,
             "utc_now_iso": utc_now.isoformat(),
-            "_instruction": (
-                "This is the only source of truth for the current calendar date. "
-                "Compute tomorrow, next Monday, etc. from calendar.today. "
-                "Do not use years from training data (e.g. 2023)."
-            ),
         },
         "folders": folders_out,
         "boards": result,
