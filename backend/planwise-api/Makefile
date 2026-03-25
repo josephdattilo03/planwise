@@ -1,4 +1,4 @@
-.PHONY: start-local start-dynamodb create-tables build-sam start-api start-api-eager start-api-debug stop clean health-check
+.PHONY: start-local start-dynamodb create-tables build-sam start-api start-api-lazy start-api-eager start-api-debug stop clean health-check
 
 AWS_ENDPOINT=http://localhost:8000
 AWS_REGION=us-east-1
@@ -143,17 +143,25 @@ build-sam:
 # ------------------------
 # SAM Local API
 # ------------------------
-# LAZY: API listens immediately; each Lambda spins up on first request. Avoids EAGER startup where Docker
-# builds many layer-backed images at once; that triggers file watchers on DependenciesLayer and can stall macOS.
-# Use start-api-eager when you need every function container warm before the first HTTP call.
+# Default EAGER: pre-warms all function containers at startup. On macOS, parallel mounts can hang — use start-api-lazy.
 #
 start-api:
-	@echo "Starting SAM Local API..."
+	@echo "Starting SAM Local API (warm-containers EAGER)..."
 	@if [ ! -d ".aws-sam/build" ]; then \
 		echo "ERROR: .aws-sam/build directory not found. Run 'make build-sam' first."; \
 		exit 1; \
 	fi
-	SAM_CLI_PARALLEL=false sam local start-api --env-vars env.json --port 3001
+	SAM_CLI_PARALLEL=false sam local start-api --env-vars env.json --port 3001 --warm-containers EAGER
+
+start-api-lazy:
+	@echo "Starting SAM Local API (warm-containers LAZY)..."
+	@if [ ! -d ".aws-sam/build" ]; then \
+		echo "ERROR: .aws-sam/build directory not found. Run 'make build-sam' first."; \
+		exit 1; \
+	fi
+	SAM_CLI_PARALLEL=false sam local start-api --env-vars env.json --port 3001 --warm-containers LAZY
+
+start-api-eager: start-api
 
 # ------------------------
 # Cleanup
@@ -177,3 +185,20 @@ logs:
 
 insert-db-data:
 	@python3 tests/scripts/insert_db_data.py
+
+resume:
+	@echo "🚀 Resuming API from last build..."
+	@if [ ! -d ".aws-sam/build" ]; then \
+		echo "❌ ERROR: No build found. Run 'make build-sam' first."; \
+		exit 1; \
+	fi
+	@# Check if DynamoDB is actually up before starting
+	@if ! $(DUMMY_CREDS) aws dynamodb list-tables --endpoint-url $(AWS_ENDPOINT) --region $(AWS_REGION) > /dev/null 2>&1; then \
+		echo "⚠️ DynamoDB is not running. Starting it now..."; \
+		docker compose up -d; \
+		sleep 2; \
+	fi
+	SAM_CLI_PARALLEL=false sam local start-api \
+		--env-vars env.json \
+		--port 3001 \
+		--warm-containers EAGER

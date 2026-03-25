@@ -22,8 +22,8 @@ def lambda_handler(
 
     try:
         folder_obj = Folder(**updated_folder)
-        if not folder_obj.id or folder_obj.user_id:
-            raise ValidationAppError()
+        if not folder_obj.id or not folder_obj.user_id:
+            raise ValidationAppError([])
         service.update_folder(folder_obj)
     except ValidationError as e:
         raise ValidationAppError(e.errors())

@@ -17,12 +17,26 @@ from shared.services.schedule_agent_context import build_schedule_context
 from shared.services.schedule_agent_tools import (
     SCHEDULE_AGENT_TOOLS,
     WRITE_TOOL_NAMES,
+    enrich_write_arguments,
     execute_tool,
+    preview_write_tool,
 )
 from shared.utils.errors import BadRequestError
 from shared.utils.lambda_error_wrapper import lambda_http_handler
 
-MAX_TOOL_ROUNDS = 10
+MAX_TOOL_ROUNDS = 24
+
+
+def _require_ascii_api_key(api_key: str) -> None:
+    """OpenAI keys are ASCII; stray Unicode in env (e.g. copy-paste) breaks HTTP headers."""
+    try:
+        api_key.encode("ascii")
+    except UnicodeEncodeError as e:
+        raise ValueError(
+            "OPENAI_API_KEY must be ASCII-only. Replace the key in env.json — "
+            "corrupted or non-English characters (often at the spot mentioned in the error) "
+            "cause 'ascii' codec errors when calling OpenAI."
+        ) from e
 
 
 def _handle_execute_plan(
@@ -63,11 +77,18 @@ def lambda_handler(
     event: lambda_events.APIGatewayProxyEventV2,
     context: lambda_context.Context,
 ) -> APIGatewayProxyResponseV2:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
+    api_key = os.environ.get("OPENAI_API_KEY") or ""
+    if not api_key.strip():
         return {
             "statusCode": 500,
             "body": json.dumps({"error": "OPENAI_API_KEY not configured"}),
+        }
+    try:
+        _require_ascii_api_key(api_key)
+    except ValueError as ve:
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": str(ve)}),
         }
 
     path_params = event.get("pathParameters") or {}
@@ -78,7 +99,7 @@ def lambda_handler(
     if not event.get("body"):
         raise BadRequestError()
 
-    body = json.loads(event["body"])
+    body = json.loads(event.get("body") or "")
     plan_only = body.get("plan_only") is True
     execute_plan = body.get("execute_plan")
 
@@ -91,11 +112,24 @@ def lambda_handler(
         raise BadRequestError()
 
     board_ids = body.get("board_ids")  # optional list of board ids to scope context
+    user_timezone = body.get("timezone")
+    user_local_date = body.get("user_local_date")
+    if user_timezone is not None and not isinstance(user_timezone, str):
+        user_timezone = None
+    if user_local_date is not None and not isinstance(user_local_date, str):
+        user_local_date = None
 
-    context_data = build_schedule_context(user_id, board_ids)
+    context_data = build_schedule_context(
+        user_id,
+        board_ids,
+        user_timezone=user_timezone,
+        user_local_date=user_local_date,
+    )
     context_json = json.dumps(context_data, indent=2)
+    cal = context_data.get("calendar") or {}
+    tz_for_prompt = str(cal.get("timezone") or "UTC")
     system_prompt = build_schedule_agent_system_prompt(
-        context_json, timezone="UTC", plan_only=plan_only
+        context_json, timezone=tz_for_prompt, plan_only=plan_only
     )
 
     client = OpenAI(api_key=api_key)
@@ -113,6 +147,7 @@ def lambda_handler(
             messages=messages,
             tools=SCHEDULE_AGENT_TOOLS,
             tool_choice="auto",
+            parallel_tool_calls=True,
         )
         choice = response.choices[0]
         msg = choice.message
@@ -144,8 +179,9 @@ def lambda_handler(
                 except json.JSONDecodeError:
                     args = {}
                 if plan_only and name in WRITE_TOOL_NAMES:
+                    args = enrich_write_arguments(name, args)
                     proposed_actions.append({"tool": name, "arguments": args})
-                    result = "Recorded for confirmation. No changes applied yet."
+                    result = preview_write_tool(name, args, user_id)
                 else:
                     result = execute_tool(name, args, user_id)
                 messages.append(

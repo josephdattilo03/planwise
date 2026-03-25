@@ -420,17 +420,43 @@ Resources:
       Environment:
         Variables:
           FOLDER_TABLE: !Ref FolderTable
+          BOARD_TABLE: !Ref BoardTable
       Layers:
         - !Ref DependenciesLayer
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref FolderTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable
       Events:
         DeleteEvent:
           Type: Api
           Properties:
             Path: /user/{user_id}/folder/{id}
             Method: delete
+
+  MoveFolderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/folder/
+      Handler: move_folder.lambda_handler
+      Environment:
+        Variables:
+          FOLDER_TABLE: !Ref FolderTable
+          BOARD_TABLE: !Ref BoardTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FolderTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BoardTable
+      Events:
+        MoveFolderEvent:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/folder/{id}/move
+            Method: post
 
   GetFoldersByDepthFunction:
     Type: AWS::Serverless::Function
@@ -588,6 +614,7 @@ Resources:
           EVENT_TABLE: !Ref EventTable
           TASK_TABLE: !Ref TaskTable
           BOARD_TABLE: !Ref BoardTable
+          NOTE_TABLE: !Ref NoteTable
           OPENAI_API_KEY: !Ref OpenAIApiKey
       Layers:
         - !Ref DependenciesLayer
@@ -598,6 +625,8 @@ Resources:
             TableName: !Ref TaskTable
         - DynamoDBCrudPolicy:
             TableName: !Ref BoardTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NoteTable
       Events:
         ScheduleAgent:
           Type: Api
@@ -834,6 +863,26 @@ Resources:
           Type: Api
           Properties:
             Path: /user/{user_id}/note/{id}
+            Method: get
+
+  GetNotesByUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/note/
+      Handler: get_notes_by_user.lambda_handler
+      Environment:
+        Variables:
+          NOTE_TABLE: !Ref NoteTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref NoteTable
+      Events:
+        GetNotesByUser:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/note/
             Method: get
 
   UpdateNoteFunction:
