@@ -2,7 +2,7 @@
 import json
 import re
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional
 
 from pydantic import ValidationError
@@ -17,355 +17,317 @@ from shared.services.event_service import EventService
 from shared.services.folder_service import FolderService
 from shared.services.note_service import NoteService
 from shared.services.task_service import TaskService
+from shared.services.canvas_assignments_service import fetch_canvas_snapshot
 from shared.utils.errors import InvalidEventTimeError, NotFoundError
 
-# ---------------------------------------------------------------------------
-# OpenAI tool definitions (function-calling format)
-# ---------------------------------------------------------------------------
+DEFAULT_BOARD_COLOR = "#4a7c59"
+DEFAULT_EVENT_COLOR = "#3b82f6"
+_HEX6 = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+class PlanPreviewRegistry:
+    """In-memory fld_*/bd_* from plan-only previews (not in DynamoDB yet)."""
+
+    __slots__ = ("folders", "boards")
+
+    def __init__(self) -> None:
+        self.folders: dict[str, Folder] = {}
+        self.boards: dict[str, Board] = {}
+
+
+def _get_folder_for_parent(
+    folder_id: str, user_id: str, preview: Optional[PlanPreviewRegistry] = None
+) -> Optional[Folder]:
+    fs = FolderService()
+    fs.ensure_root_folder(user_id)
+    parent = fs.get_folder_by_id(folder_id, user_id)
+    if parent is not None:
+        return parent
+    if preview is not None and folder_id in preview.folders:
+        return preview.folders[folder_id]
+    return None
+
+
+def _resolve_folder_id(
+    raw: Any, user_id: str, preview: Optional[PlanPreviewRegistry] = None
+) -> str:
+    if raw is None:
+        raise ValueError("parent_folder_id is required (use get_folders: 'root' or a folder id)")
+    s = str(raw).strip()
+    if not s:
+        raise ValueError("parent_folder_id is required")
+    if s.lower() == "root":
+        return "root"
+    fs = FolderService()
+    fs.ensure_root_folder(user_id)
+    rows = fs.get_boards_by_user_id(user_id) or []
+    for f in rows:
+        if f is None:
+            continue
+        if f.id == s:
+            return f.id
+        if (getattr(f, "name", None) or "").strip().lower() == s.lower():
+            return f.id
+    if preview is not None and s in preview.folders:
+        return s
+    raise ValueError(
+        f'Unknown folder "{s}". If this folder is new, call create_folder first under '
+        "`root` (or an existing parent), then create_board using that folder's `id` from "
+        "the tool result or get_folders. Otherwise use `id` or the exact name from get_folders."
+    )
+
+
+def _resolve_board_id(
+    raw: Any, user_id: str, preview: Optional[PlanPreviewRegistry] = None
+) -> str:
+    if raw is None:
+        raise ValueError("board_id is required (use get_boards for ids)")
+    s = str(raw).strip()
+    if not s:
+        raise ValueError("board_id is required")
+    svc = BoardService()
+    boards = svc.get_boards_by_user_id(user_id) or []
+    for b in boards:
+        if b.id == s:
+            return b.id
+        if (b.name or "").strip().lower() == s.lower():
+            return b.id
+    if preview is not None and s in preview.boards:
+        return s
+    raise ValueError(
+        f'Unknown board "{s}". Call get_boards and use a board `id` or exact name from the list.'
+    )
+
+
+def _oa_params(
+    properties: dict[str, Any], required: list[str] | None = None
+) -> dict[str, Any]:
+    p: dict[str, Any] = {"type": "object", "properties": properties}
+    if required:
+        p["required"] = required
+    return p
+
+
+def _oa_tool(name: str, description: str, parameters: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "type": "function",
+        "function": {"name": name, "description": description, "parameters": parameters},
+    }
+
 
 SCHEDULE_AGENT_TOOLS: list[dict[str, Any]] = [
-    {
-        "type": "function",
-        "function": {
-            "name": "get_boards",
-            "description": "List all boards for the user. Returns id, name, path, depth, and color (same fields the app uses for boards).",
-            "parameters": {
-                "type": "object",
-                "properties": {},
+    _oa_tool("get_boards", "List boards (id, name, path, depth, color).", _oa_params({})),
+    _oa_tool(
+        "get_events",
+        "Events on a board.",
+        _oa_params({"board_id": {"type": "string"}}, ["board_id"]),
+    ),
+    _oa_tool(
+        "get_tasks",
+        "Tasks on a board.",
+        _oa_params({"board_id": {"type": "string"}}, ["board_id"]),
+    ),
+    _oa_tool(
+        "get_folders",
+        "List folders (id, name, path, depth). Use real parent_folder_id (often root) before creates.",
+        _oa_params({}),
+    ),
+    _oa_tool(
+        "get_canvas_assignments",
+        "Fetch the user's Canvas LMS courses and assignments (titles, due_at ISO times, points, links). "
+        "Call when the user asks about homework, Canvas, syllabus, grades, or what's due. "
+        "Also call before proposing create_task or create_event for schoolwork so due dates and titles match Canvas.",
+        _oa_params({}),
+    ),
+    _oa_tool(
+        "create_board",
+        "Create board under an existing folder only. parent_folder_id = root, fld id, or folder name "
+        "(from get_folders or a prior create_folder result). If folders are new, create_folder first.",
+        _oa_params(
+            {
+                "name": {"type": "string"},
+                "color": {"type": "string"},
+                "parent_folder_id": {"type": "string"},
+                "id": {"type": "string"},
             },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_events",
-            "description": "Get all events for a given board.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "board_id": {"type": "string", "description": "The board ID"},
-                },
-                "required": ["board_id"],
+            ["name", "parent_folder_id"],
+        ),
+    ),
+    _oa_tool(
+        "create_folder",
+        "Create folder: same parent_folder_id rules as create_board.",
+        _oa_params(
+            {
+                "name": {"type": "string"},
+                "parent_folder_id": {"type": "string"},
+                "id": {"type": "string"},
             },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_tasks",
-            "description": "Get all tasks for a given board.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "board_id": {"type": "string", "description": "The board ID"},
-                },
-                "required": ["board_id"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_folders",
-            "description": (
-                "List all folders for the user (workspace tree). Returns id, name, path, depth. "
-                "Use this before create_board or create_folder so you use a real parent_folder_id "
-                "(e.g. \"root\" for top-level). Boards appear under a parent folder when path/depth match that folder; "
-                "the app computes path from the parent — do not invent path strings yourself."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {},
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "create_board",
-            "description": (
-                "Create a new board under a parent folder (same rules as the Planwise UI). "
-                "Always set parent_folder_id from get_folders (typically \"root\" for workspace root). "
-                "Path and depth are computed from the parent so the board shows in the folder tree."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string", "description": "Board display name"},
-                    "color": {"type": "string", "description": "Hex color e.g. #3b82f6"},
-                    "parent_folder_id": {
-                        "type": "string",
-                        "description": 'Parent folder id, e.g. "root" for boards at workspace root',
-                    },
-                    "id": {
-                        "type": "string",
-                        "description": "Optional; omit to auto-generate",
-                    },
-                },
-                "required": ["name", "color", "parent_folder_id"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "create_folder",
-            "description": (
-                "Create a subfolder under a parent folder. Path and depth are derived from the parent "
-                "like the rest of the app so the folder appears in the tree."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string", "description": "Folder display name"},
-                    "parent_folder_id": {"type": "string", "description": "Parent folder id (use get_folders)"},
-                    "id": {"type": "string", "description": "Optional; omit to auto-generate"},
-                },
-                "required": ["name", "parent_folder_id"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "delete_board",
-            "description": "Delete a board. Events and tasks on the board may need to be deleted separately depending on backend behavior.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "board_id": {"type": "string", "description": "The board ID to delete"},
-                },
-                "required": ["board_id"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "create_event",
-            "description": "Create a new event on a board. Dates in YYYY-MM-DD. You may omit id; one will be generated.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "board_id": {"type": "string"},
-                    "start_time": {"type": "string", "description": "ISO date or datetime: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS"},
-                    "end_time": {"type": "string", "description": "ISO date or datetime: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS"},
-                    "description": {"type": "string"},
-                    "location": {"type": "string"},
-                    "event_color": {"type": "string", "description": "Hex color e.g. #3b82f6"},
-                    "is_all_day": {"type": "boolean", "default": False},
-                    "recurrence": {
-                        "type": "object",
-                        "description": "Optional. frequency: daily|weekly|monthly|yearly; day_of_week: list of weekday names; termination_date: YYYY-MM-DD; date_start: optional YYYY-MM-DD",
-                        "properties": {
-                            "frequency": {"type": "string", "enum": ["daily", "weekly", "monthly", "yearly"]},
-                            "day_of_week": {"type": "array", "items": {"type": "string"}},
-                            "termination_date": {"type": "string"},
-                            "date_start": {"type": "string"},
+            ["name", "parent_folder_id"],
+        ),
+    ),
+    _oa_tool(
+        "delete_board",
+        "Delete board (id or name).",
+        _oa_params({"board_id": {"type": "string"}}, ["board_id"]),
+    ),
+    _oa_tool(
+        "create_event",
+        "Create event: board_id id or name; start_time ISO; end_time optional (+1h default).",
+        _oa_params(
+            {
+                "board_id": {"type": "string"},
+                "start_time": {"type": "string"},
+                "end_time": {"type": "string"},
+                "description": {"type": "string"},
+                "location": {"type": "string"},
+                "event_color": {"type": "string"},
+                "is_all_day": {"type": "boolean", "default": False},
+                "recurrence": {
+                    "type": "object",
+                    "properties": {
+                        "frequency": {
+                            "type": "string",
+                            "enum": ["daily", "weekly", "monthly", "yearly"],
                         },
+                        "day_of_week": {"type": "array", "items": {"type": "string"}},
+                        "termination_date": {"type": "string"},
+                        "date_start": {"type": "string"},
                     },
                 },
-                "required": ["board_id", "start_time", "end_time", "description", "location", "event_color", "is_all_day"],
             },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "update_event",
-            "description": "Update an existing event. Provide event id, board_id, and any fields to update.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "id": {"type": "string"},
-                    "board_id": {"type": "string"},
-                    "start_time": {"type": "string"},
-                    "end_time": {"type": "string"},
-                    "description": {"type": "string"},
-                    "location": {"type": "string"},
-                    "event_color": {"type": "string"},
-                    "is_all_day": {"type": "boolean"},
-                    "recurrence": {"type": "object"},
+            ["board_id", "start_time"],
+        ),
+    ),
+    _oa_tool(
+        "update_event",
+        "Update event (id + board_id + fields to change).",
+        _oa_params(
+            {
+                "id": {"type": "string"},
+                "board_id": {"type": "string"},
+                "start_time": {"type": "string"},
+                "end_time": {"type": "string"},
+                "description": {"type": "string"},
+                "location": {"type": "string"},
+                "event_color": {"type": "string"},
+                "is_all_day": {"type": "boolean"},
+                "recurrence": {"type": "object"},
+            },
+            ["id", "board_id"],
+        ),
+    ),
+    _oa_tool(
+        "delete_event",
+        "Delete event.",
+        _oa_params(
+            {"event_id": {"type": "string"}, "board_id": {"type": "string"}},
+            ["event_id", "board_id"],
+        ),
+    ),
+    _oa_tool(
+        "create_task",
+        "Create task: board_id id or name; optional progress/due_date/tag_ids.",
+        _oa_params(
+            {
+                "board_id": {"type": "string"},
+                "name": {"type": "string"},
+                "description": {"type": "string"},
+                "progress": {
+                    "type": "string",
+                    "enum": ["to-do", "in-progress", "done", "pending"],
                 },
-                "required": ["id", "board_id"],
+                "priority_level": {"type": "integer"},
+                "due_date": {"type": "string"},
+                "tag_ids": {"type": "array", "items": {"type": "string"}},
             },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "delete_event",
-            "description": "Delete an event.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "event_id": {"type": "string"},
-                    "board_id": {"type": "string"},
+            ["board_id", "name"],
+        ),
+    ),
+    _oa_tool(
+        "update_task",
+        "Update task (id + board_id + fields).",
+        _oa_params(
+            {
+                "id": {"type": "string"},
+                "board_id": {"type": "string"},
+                "name": {"type": "string"},
+                "description": {"type": "string"},
+                "progress": {
+                    "type": "string",
+                    "enum": ["to-do", "in-progress", "done", "pending"],
                 },
-                "required": ["event_id", "board_id"],
+                "priority_level": {"type": "integer"},
+                "due_date": {"type": "string"},
+                "tag_ids": {"type": "array", "items": {"type": "string"}},
             },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "create_task",
-            "description": "Create a new task on a board. due_date is YYYY-MM-DD. You may omit id and tag_ids. Call get_boards first to use a real board_id.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "board_id": {"type": "string"},
-                    "name": {"type": "string"},
-                    "description": {"type": "string"},
-                    "progress": {"type": "string", "enum": ["to-do", "in-progress", "done", "pending"]},
-                    "priority_level": {"type": "integer"},
-                    "due_date": {"type": "string", "description": "YYYY-MM-DD"},
-                    "tag_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Optional tag ids; omit or use empty array if none",
-                    },
-                },
-                "required": ["board_id", "name", "description", "progress", "priority_level", "due_date"],
+            ["id", "board_id"],
+        ),
+    ),
+    _oa_tool(
+        "delete_task",
+        "Delete task.",
+        _oa_params(
+            {"task_id": {"type": "string"}, "board_id": {"type": "string"}},
+            ["task_id", "board_id"],
+        ),
+    ),
+    _oa_tool(
+        "get_notes",
+        "List sticky notes; use get_note(id) for one.",
+        _oa_params({}),
+    ),
+    _oa_tool(
+        "get_note",
+        "Get one note by id.",
+        _oa_params({"note_id": {"type": "string"}}, ["note_id"]),
+    ),
+    _oa_tool(
+        "create_note",
+        "Create note; optional board_id; title/body may be empty.",
+        _oa_params(
+            {
+                "title": {"type": "string"},
+                "body": {"type": "string"},
+                "color": {"type": "string"},
+                "board_id": {"type": "string"},
+                "position_x": {"type": "number"},
+                "position_y": {"type": "number"},
+                "width": {"type": "number"},
+                "height": {"type": "number"},
+                "archived": {"type": "boolean"},
+                "links": {"type": "array", "items": {"type": "string"}},
+                "id": {"type": "string"},
             },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "update_task",
-            "description": "Update an existing task. Provide task id, board_id, and any fields to update.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "id": {"type": "string"},
-                    "board_id": {"type": "string"},
-                    "name": {"type": "string"},
-                    "description": {"type": "string"},
-                    "progress": {"type": "string", "enum": ["to-do", "in-progress", "done", "pending"]},
-                    "priority_level": {"type": "integer"},
-                    "due_date": {"type": "string"},
-                    "tag_ids": {"type": "array", "items": {"type": "string"}},
-                },
-                "required": ["id", "board_id"],
+            ["title", "body"],
+        ),
+    ),
+    _oa_tool(
+        "update_note",
+        "Update note by id.",
+        _oa_params(
+            {
+                "id": {"type": "string"},
+                "title": {"type": "string"},
+                "body": {"type": "string"},
+                "color": {"type": "string"},
+                "board_id": {"type": "string"},
+                "position_x": {"type": "number"},
+                "position_y": {"type": "number"},
+                "width": {"type": "number"},
+                "height": {"type": "number"},
+                "archived": {"type": "boolean"},
+                "links": {"type": "array", "items": {"type": "string"}},
             },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "delete_task",
-            "description": "Delete a task.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "task_id": {"type": "string"},
-                    "board_id": {"type": "string"},
-                },
-                "required": ["task_id", "board_id"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_notes",
-            "description": (
-                "List all sticky notes for the user (title, body, color, layout, archived, optional board_id). "
-                "Use get_note for one note if you already know the id."
-            ),
-            "parameters": {"type": "object", "properties": {}},
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_note",
-            "description": "Fetch a single note by id.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "note_id": {"type": "string", "description": "Note id"},
-                },
-                "required": ["note_id"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "create_note",
-            "description": (
-                "Create a sticky note. Optional board_id ties it to a board in the UI. "
-                "Color uses UI tokens like bg-pink, bg-yellow (default bg-pink). "
-                "Omit id to auto-generate."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string", "description": "May be empty string"},
-                    "body": {"type": "string", "description": "Note text content"},
-                    "color": {
-                        "type": "string",
-                        "description": "e.g. bg-pink, bg-yellow, bg-blue",
-                    },
-                    "board_id": {
-                        "type": "string",
-                        "description": "Optional board id to associate the note",
-                    },
-                    "position_x": {"type": "number"},
-                    "position_y": {"type": "number"},
-                    "width": {"type": "number"},
-                    "height": {"type": "number"},
-                    "archived": {"type": "boolean"},
-                    "links": {"type": "array", "items": {"type": "string"}},
-                    "id": {"type": "string"},
-                },
-                "required": ["title", "body"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "update_note",
-            "description": "Update an existing note. Provide note id and any fields to change.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "id": {"type": "string"},
-                    "title": {"type": "string"},
-                    "body": {"type": "string"},
-                    "color": {"type": "string"},
-                    "board_id": {"type": "string"},
-                    "position_x": {"type": "number"},
-                    "position_y": {"type": "number"},
-                    "width": {"type": "number"},
-                    "height": {"type": "number"},
-                    "archived": {"type": "boolean"},
-                    "links": {"type": "array", "items": {"type": "string"}},
-                },
-                "required": ["id"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "delete_note",
-            "description": "Delete a note by id.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "note_id": {"type": "string"},
-                },
-                "required": ["note_id"],
-            },
-        },
-    },
+            ["id"],
+        ),
+    ),
+    _oa_tool(
+        "delete_note",
+        "Delete note by id.",
+        _oa_params({"note_id": {"type": "string"}}, ["note_id"]),
+    ),
 ]
 
-# Tool names that modify data; in plan_only mode these are recorded, not executed.
 WRITE_TOOL_NAMES: frozenset[str] = frozenset({
     "create_board", "create_folder", "delete_board",
     "create_event", "update_event", "delete_event",
@@ -374,124 +336,218 @@ WRITE_TOOL_NAMES: frozenset[str] = frozenset({
 })
 
 
-def enrich_write_arguments(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    """
-    Ensure create_* calls have stable ids before plan preview and execute_plan.
-    Matches id generation in _create_* so preview tool results and execution stay aligned.
-    """
+def prepare_write_arguments(
+    tool_name: str,
+    arguments: dict[str, Any],
+    user_id: str,
+    preview: Optional[PlanPreviewRegistry] = None,
+) -> dict[str, Any]:
+    """Defaults, name→id resolution, stable ids for create_* (aligns preview + execute_plan)."""
     out = dict(arguments)
-    if tool_name == "create_board" and not out.get("id"):
-        out["id"] = f"bd_{uuid.uuid4().hex[:12]}"
-    elif tool_name == "create_folder" and not out.get("id"):
-        out["id"] = f"fld_{uuid.uuid4().hex[:12]}"
-    elif tool_name == "create_event" and not out.get("id"):
-        out["id"] = f"evt_{uuid.uuid4().hex[:12]}"
-    elif tool_name == "create_task" and not out.get("id"):
-        out["id"] = f"tsk_{uuid.uuid4().hex[:12]}"
-    elif tool_name == "create_note" and not out.get("id"):
-        out["id"] = f"nt_{uuid.uuid4().hex[:12]}"
+
+    if tool_name == "create_board":
+        out["parent_folder_id"] = _resolve_folder_id(
+            out.get("parent_folder_id"), user_id, preview
+        )
+        name = str(out.get("name") or "").strip()
+        if not name:
+            raise ValueError("create_board requires a non-empty name")
+        out["name"] = name
+        c = str(out.get("color") or "").strip()
+        out["color"] = c if _HEX6.fullmatch(c) else DEFAULT_BOARD_COLOR
+        if not out.get("id"):
+            out["id"] = f"bd_{uuid.uuid4().hex[:12]}"
+        return out
+
+    if tool_name == "create_folder":
+        out["parent_folder_id"] = _resolve_folder_id(
+            out.get("parent_folder_id"), user_id, preview
+        )
+        name = str(out.get("name") or "").strip()
+        if not name:
+            raise ValueError("create_folder requires a non-empty name")
+        out["name"] = name
+        if not out.get("id"):
+            out["id"] = f"fld_{uuid.uuid4().hex[:12]}"
+        return out
+
+    if tool_name == "create_event":
+        out["board_id"] = _resolve_board_id(out.get("board_id"), user_id, preview)
+        st = out.get("start_time")
+        if not st:
+            raise ValueError("create_event requires start_time")
+        et = out.get("end_time")
+        dt_s = _parse_event_time(str(st))
+        if et:
+            dt_e = _parse_event_time(str(et))
+        else:
+            dt_e = dt_s + timedelta(hours=1)
+        if dt_e <= dt_s:
+            dt_e = dt_s + timedelta(hours=1)
+        out["start_time"] = dt_s.isoformat()
+        out["end_time"] = dt_e.isoformat()
+        out.setdefault("description", "")
+        out.setdefault("location", "")
+        ec = str(out.get("event_color") or "").strip()
+        out["event_color"] = ec if _HEX6.fullmatch(ec) else DEFAULT_EVENT_COLOR
+        if "is_all_day" not in out:
+            out["is_all_day"] = False
+        if not out.get("id"):
+            out["id"] = f"evt_{uuid.uuid4().hex[:12]}"
+        return out
+
+    if tool_name == "create_task":
+        out["board_id"] = _resolve_board_id(out.get("board_id"), user_id, preview)
+        name = str(out.get("name") or "").strip()
+        if not name:
+            raise ValueError("create_task requires a non-empty name")
+        out["name"] = name
+        out.setdefault("description", "")
+        out.setdefault("progress", "to-do")
+        if out["progress"] not in ("to-do", "in-progress", "done", "pending"):
+            out["progress"] = "to-do"
+        try:
+            out["priority_level"] = int(out.get("priority_level", 0))
+        except (TypeError, ValueError):
+            out["priority_level"] = 0
+        if not out.get("due_date"):
+            out["due_date"] = date.today().isoformat()
+        if not out.get("id"):
+            out["id"] = f"tsk_{uuid.uuid4().hex[:12]}"
+        return out
+
+    if tool_name == "create_note":
+        out.setdefault("title", "")
+        out.setdefault("body", "")
+        raw_bid = out.get("board_id")
+        if raw_bid not in (None, ""):
+            out["board_id"] = _resolve_board_id(raw_bid, user_id, preview)
+        if not out.get("id"):
+            out["id"] = f"nt_{uuid.uuid4().hex[:12]}"
+        return out
+
+    if tool_name in (
+        "delete_board",
+        "delete_event",
+        "delete_task",
+        "update_event",
+        "update_task",
+    ):
+        out["board_id"] = _resolve_board_id(out.get("board_id"), user_id, preview)
+        return out
+
+    if tool_name == "update_note":
+        raw_bid = out.get("board_id")
+        if raw_bid not in (None, ""):
+            out["board_id"] = _resolve_board_id(raw_bid, user_id, preview)
+        return out
+
     return out
 
 
-def preview_write_tool(tool_name: str, arguments: dict[str, Any], user_id: str) -> str:
-    """
-    Plan-only: return the same JSON shape as execute_tool would, without persisting.
-    Lets the model chain tools (e.g. create_board then create_event with board_id).
-    """
+def normalize_tool_arguments(
+    tool_name: str,
+    arguments: Optional[dict[str, Any]],
+    user_id: str,
+    preview: Optional[PlanPreviewRegistry] = None,
+) -> dict[str, Any]:
+    """Name→id resolution and defaults for tool arguments."""
+    out = dict(arguments or {})
+    if tool_name in ("get_events", "get_tasks"):
+        if out.get("board_id") not in (None, ""):
+            out["board_id"] = _resolve_board_id(out.get("board_id"), user_id, preview)
+        return out
+    if tool_name in WRITE_TOOL_NAMES:
+        return prepare_write_arguments(tool_name, out, user_id, preview)
+    return out
+
+
+def _preview_queued(action: str, **fields: Any) -> str:
+    return json.dumps(
+        {"message": f"{action} queued for confirmation (not applied yet).", **fields}
+    )
+
+
+def preview_write_tool(
+    tool_name: str,
+    arguments: dict[str, Any],
+    user_id: str,
+    preview: Optional[PlanPreviewRegistry] = None,
+) -> str:
+    """Plan-only dry run; same JSON shape as execute where applicable."""
+    a = arguments
     if tool_name == "create_board":
-        return _create_board(arguments, user_id, persist=False)
+        return _create_board(a, user_id, persist=False, preview=preview)
     if tool_name == "create_folder":
-        return _create_folder(arguments, user_id, persist=False)
+        return _create_folder(a, user_id, persist=False, preview=preview)
     if tool_name == "create_event":
-        return _create_event(arguments, persist=False)
+        return _create_event(a, persist=False)
     if tool_name == "create_task":
-        return _create_task(arguments, user_id, persist=False)
+        return _create_task(a, user_id, persist=False)
     if tool_name == "create_note":
-        return _create_note(arguments, user_id, persist=False)
+        return _create_note(a, user_id, persist=False)
     if tool_name == "delete_board":
-        return json.dumps({
-            "message": "Deletion queued for confirmation (not applied yet).",
-            "board_id": arguments.get("board_id"),
-        })
+        return _preview_queued("Deletion", board_id=a.get("board_id"))
     if tool_name == "delete_event":
-        return json.dumps({
-            "message": "Deletion queued for confirmation (not applied yet).",
-            "event_id": arguments.get("event_id"),
-            "board_id": arguments.get("board_id"),
-        })
+        return _preview_queued(
+            "Deletion", event_id=a.get("event_id"), board_id=a.get("board_id")
+        )
     if tool_name == "delete_task":
-        return json.dumps({
-            "message": "Deletion queued for confirmation (not applied yet).",
-            "task_id": arguments.get("task_id"),
-            "board_id": arguments.get("board_id"),
-        })
+        return _preview_queued(
+            "Deletion", task_id=a.get("task_id"), board_id=a.get("board_id")
+        )
     if tool_name == "delete_note":
-        return json.dumps({
-            "message": "Deletion queued for confirmation (not applied yet).",
-            "note_id": arguments.get("note_id"),
-        })
+        return _preview_queued("Deletion", note_id=a.get("note_id"))
     if tool_name == "update_event":
-        return json.dumps({
-            "message": "Update queued for confirmation (not applied yet).",
-            "event_id": arguments.get("id"),
-            "board_id": arguments.get("board_id"),
-        })
+        return _preview_queued("Update", event_id=a.get("id"), board_id=a.get("board_id"))
     if tool_name == "update_task":
-        return json.dumps({
-            "message": "Update queued for confirmation (not applied yet).",
-            "task_id": arguments.get("id"),
-            "board_id": arguments.get("board_id"),
-        })
+        return _preview_queued("Update", task_id=a.get("id"), board_id=a.get("board_id"))
     if tool_name == "update_note":
-        return json.dumps({
-            "message": "Update queued for confirmation (not applied yet).",
-            "note_id": arguments.get("id"),
-        })
+        return _preview_queued("Update", note_id=a.get("id"))
     return json.dumps({"error": f"No plan preview for write tool: {tool_name}"})
 
 
 def execute_tool(tool_name: str, arguments: dict[str, Any], user_id: str) -> str:
-    """
-    Execute a single tool and return a short result string for the LLM.
-    Catches validation and not-found errors and returns them as strings.
-    """
+    a, u = arguments, user_id
     try:
         if tool_name == "get_boards":
-            return _get_boards(user_id)
+            return _get_boards(u)
         if tool_name == "get_folders":
-            return _get_folders(user_id)
+            return _get_folders(u)
+        if tool_name == "get_canvas_assignments":
+            return _get_canvas_assignments()
         if tool_name == "get_events":
-            return _get_events(arguments["board_id"])
+            return _get_events(a["board_id"])
         if tool_name == "get_tasks":
-            return _get_tasks(arguments["board_id"])
+            return _get_tasks(a["board_id"])
         if tool_name == "create_board":
-            return _create_board(arguments, user_id)
+            return _create_board(a, u)
         if tool_name == "create_folder":
-            return _create_folder(arguments, user_id)
+            return _create_folder(a, u)
         if tool_name == "delete_board":
-            return _delete_board(arguments["board_id"], user_id)
+            return _delete_board(a["board_id"], u)
         if tool_name == "create_event":
-            return _create_event(arguments)
+            return _create_event(a)
         if tool_name == "update_event":
-            return _update_event(arguments)
+            return _update_event(a)
         if tool_name == "delete_event":
-            return _delete_event(arguments["event_id"], arguments["board_id"])
+            return _delete_event(a["event_id"], a["board_id"])
         if tool_name == "create_task":
-            return _create_task(arguments, user_id)
+            return _create_task(a, u)
         if tool_name == "update_task":
-            return _update_task(arguments)
+            return _update_task(a)
         if tool_name == "delete_task":
-            return _delete_task(arguments["task_id"], arguments["board_id"])
+            return _delete_task(a["task_id"], a["board_id"])
         if tool_name == "get_notes":
-            return _get_notes(user_id)
+            return _get_notes(u)
         if tool_name == "get_note":
-            return _get_note(arguments["note_id"], user_id)
+            return _get_note(a["note_id"], u)
         if tool_name == "create_note":
-            return _create_note(arguments, user_id)
+            return _create_note(a, u)
         if tool_name == "update_note":
-            return _update_note(arguments, user_id)
+            return _update_note(a, u)
         if tool_name == "delete_note":
-            return _delete_note(arguments["note_id"], user_id)
+            return _delete_note(a["note_id"], u)
         return f"Unknown tool: {tool_name}"
     except NotFoundError:
         return "Not found (e.g. missing board, event, task, folder, or note)."
@@ -504,7 +560,6 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], user_id: str) -> str
 
 
 def _slug_segment(name: str, default: str = "item") -> str:
-    """Match planwise-ui boardService: lower case, non-alphanumeric -> hyphen, trim."""
     s = re.sub(r"[^a-z0-9]+", "-", name.strip().lower())
     s = s.strip("-")
     return s or default
@@ -513,10 +568,6 @@ def _slug_segment(name: str, default: str = "item") -> str:
 def _path_and_depth_under_parent(
     parent: Folder, child_name: str, slug_default: str = "board"
 ) -> tuple[str, int]:
-    """
-    Same path/depth rules as planwise-ui createBoard: extend parent.path with a slug + unique suffix;
-    depth = parent.depth + 1.
-    """
     base = (parent.path or "/root").rstrip("/") or "/root"
     segment = _slug_segment(child_name, default=slug_default)
     suffix = uuid.uuid4().hex[:8]
@@ -542,6 +593,20 @@ def _get_boards(user_id: str) -> str:
     )
 
 
+def _get_canvas_assignments() -> str:
+    snap = fetch_canvas_snapshot()
+    if not snap.get("ok"):
+        return json.dumps(snap)
+    return json.dumps(
+        {
+            "ok": True,
+            "courses": snap["digest"],
+            "course_count": snap.get("course_count"),
+            "assignment_count": snap.get("assignment_count"),
+        }
+    )
+
+
 def _get_folders(user_id: str) -> str:
     fs = FolderService()
     fs.ensure_root_folder(user_id)
@@ -562,12 +627,20 @@ def _get_folders(user_id: str) -> str:
     return json.dumps(out)
 
 
-def _create_board(args: dict[str, Any], user_id: str, *, persist: bool = True) -> str:
-    fs = FolderService()
-    fs.ensure_root_folder(user_id)
-    parent = fs.get_folder_by_id(str(args["parent_folder_id"]), user_id)
+def _create_board(
+    args: dict[str, Any],
+    user_id: str,
+    *,
+    persist: bool = True,
+    preview: Optional[PlanPreviewRegistry] = None,
+) -> str:
+    FolderService().ensure_root_folder(user_id)
+    parent = _get_folder_for_parent(str(args["parent_folder_id"]), user_id, preview)
     if not parent:
-        raise NotFoundError()
+        raise NotFoundError(
+            "Parent folder not found. Create the folder with create_folder first, "
+            "then use its folder_id or the folder name from get_folders / prior tool results."
+        )
     path, depth = _path_and_depth_under_parent(parent, str(args["name"]))
     board_id = args.get("id") or f"bd_{uuid.uuid4().hex[:12]}"
     board = Board(
@@ -580,6 +653,8 @@ def _create_board(args: dict[str, Any], user_id: str, *, persist: bool = True) -
     )
     if persist:
         BoardService().create_board(board)
+    elif preview is not None:
+        preview.boards[board.id] = board
     msg = "Board created successfully" if persist else "Board would be created (plan only — not applied yet)."
     return json.dumps(
         {
@@ -592,12 +667,20 @@ def _create_board(args: dict[str, Any], user_id: str, *, persist: bool = True) -
     )
 
 
-def _create_folder(args: dict[str, Any], user_id: str, *, persist: bool = True) -> str:
+def _create_folder(
+    args: dict[str, Any],
+    user_id: str,
+    *,
+    persist: bool = True,
+    preview: Optional[PlanPreviewRegistry] = None,
+) -> str:
     fs = FolderService()
     fs.ensure_root_folder(user_id)
-    parent = fs.get_folder_by_id(str(args["parent_folder_id"]), user_id)
+    parent = _get_folder_for_parent(str(args["parent_folder_id"]), user_id, preview)
     if not parent:
-        raise NotFoundError()
+        raise NotFoundError(
+            "Parent folder not found. Use root or an existing folder id/name from get_folders."
+        )
     path, depth = _path_and_depth_under_parent(parent, str(args["name"]), slug_default="folder")
     folder_id = args.get("id") or f"fld_{uuid.uuid4().hex[:12]}"
     folder = Folder(
@@ -609,6 +692,8 @@ def _create_folder(args: dict[str, Any], user_id: str, *, persist: bool = True) 
     )
     if persist:
         fs.create_folder(folder)
+    elif preview is not None:
+        preview.folders[folder.id] = folder
     msg = "Folder created successfully" if persist else "Folder would be created (plan only — not applied yet)."
     return json.dumps(
         {
@@ -674,7 +759,6 @@ def _parse_recurrence(data: Any) -> Recurrence | None:
 
 
 def _parse_event_time(s: str) -> datetime:
-    """Parse start_time/end_time from YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS (with optional Z)."""
     if not s:
         raise ValueError("Empty event time")
     s = s.strip().replace("Z", "+00:00")

@@ -1,9 +1,10 @@
 """Persist per-user integration fingerprints (e.g. Canvas assignment snapshot)."""
 from __future__ import annotations
 
+import json
 import os
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from botocore.exceptions import ClientError
 
@@ -20,23 +21,42 @@ class IntegrationStateService:
         self._table = get_table(name)
 
     def get_canvas_fingerprint(self, user_id: str) -> Optional[str]:
+        fp, _ = self.get_canvas_state(user_id)
+        return fp
+
+    def get_canvas_state(
+        self, user_id: str
+    ) -> tuple[Optional[str], Optional[list[Any]]]:
         try:
             res = self._table.get_item(
                 Key={"PK": user_id, "SK": CANVAS_SK},
-                ProjectionExpression="fingerprint",
+                ProjectionExpression="fingerprint, #d",
+                ExpressionAttributeNames={"#d": "digest"},
             )
         except ClientError:
-            return None
+            return None, None
         item = res.get("Item") or {}
         fp = item.get("fingerprint")
-        return str(fp) if fp else None
+        fp_s = str(fp) if fp else None
+        raw = item.get("digest")
+        if isinstance(raw, str) and raw.strip():
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return fp_s, parsed
+            except json.JSONDecodeError:
+                pass
+        return fp_s, None
 
-    def put_canvas_fingerprint(self, user_id: str, fingerprint: str) -> None:
+    def put_canvas_state(
+        self, user_id: str, fingerprint: str, digest: list[Any]
+    ) -> None:
         self._table.put_item(
             Item={
                 "PK": user_id,
                 "SK": CANVAS_SK,
                 "fingerprint": fingerprint,
+                "digest": json.dumps(digest),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
         )

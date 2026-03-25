@@ -1,11 +1,11 @@
-"""
-Schedule agent Lambda: accepts a user message and optional board_ids,
-uses OpenAI with tools to read/update events and tasks, returns natural language reply.
-Supports plan_only (return proposed_actions for confirmation) and execute_plan (apply proposed_actions).
-"""
+"""Schedule agent API: OpenAI tools + optional plan_only / execute_plan."""
 import json
+import logging
 import os
 from typing import Any
+
+_log = logging.getLogger(__name__)
+_log.setLevel(logging.INFO)
 
 from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
@@ -33,7 +33,6 @@ def _handle_execute_plan(
     user_id: str,
     execute_plan: list[dict[str, Any]],
 ) -> APIGatewayProxyResponseV2:
-    """Apply a list of proposed actions; no LLM call."""
     results: list[dict[str, Any]] = []
     for i, item in enumerate(execute_plan):
         if not isinstance(item, dict):
@@ -86,22 +85,42 @@ def lambda_handler(
     if not user_id:
         raise BadRequestError()
 
-    if not event.get("body"):
+    req_id = getattr(context, "aws_request_id", "?")
+    try:
+        rem = int(context.get_remaining_time_in_millis())
+    except Exception:
+        rem = -1
+    _log.info(
+        "schedule_agent lambda request_id=%s user_id=%s remaining_ms=%s",
+        req_id,
+        user_id,
+        rem,
+    )
+
+    raw_body = event.get("body")
+    if not raw_body:
         raise BadRequestError()
 
-    body = json.loads(event.get("body") or "")
+    try:
+        body = json.loads(raw_body)
+    except json.JSONDecodeError:
+        raise BadRequestError()
     plan_only = body.get("plan_only") is True
     execute_plan = body.get("execute_plan")
 
-    # Execute-plan flow: apply a previously returned proposed_actions list (no LLM call).
     if execute_plan is not None and isinstance(execute_plan, list):
+        _log.info(
+            "schedule_agent execute_plan actions=%s request_id=%s",
+            len(execute_plan),
+            req_id,
+        )
         return _handle_execute_plan(user_id, execute_plan)
 
     message = body.get("message")
     if not message or not isinstance(message, str):
         raise BadRequestError()
 
-    board_ids = body.get("board_ids")  # optional list of board ids to scope context
+    board_ids = body.get("board_ids")
     user_timezone = body.get("timezone")
     user_local_date = body.get("user_local_date")
     if user_timezone is not None and not isinstance(user_timezone, str):
@@ -110,6 +129,12 @@ def lambda_handler(
         user_local_date = None
 
     try:
+        _log.info(
+            "schedule_agent llm path plan_only=%s board_ids=%s request_id=%s",
+            plan_only,
+            board_ids is not None,
+            req_id,
+        )
         result = run_schedule_agent_llm(
             user_id,
             message,
@@ -117,14 +142,39 @@ def lambda_handler(
             board_ids=board_ids,
             user_timezone=user_timezone,
             user_local_date=user_local_date,
+            lambda_context=context,
         )
-    except RuntimeError:
+    except RuntimeError as e:
+        if "OPENAI_API_KEY not configured" in str(e):
+            return {
+                "statusCode": 500,
+                "body": json.dumps({"error": "OPENAI_API_KEY not configured"}),
+            }
         return {
             "statusCode": 500,
-            "body": json.dumps({"error": "OPENAI_API_KEY not configured"}),
+            "body": json.dumps({"error": str(e)}),
+        }
+    except Exception as e:
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": str(e)}),
         }
 
+    try:
+        body_json = json.dumps(result)
+    except (TypeError, ValueError) as e:
+        _log.exception("schedule_agent json serialize failed request_id=%s", req_id)
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": f"Response not serializable: {e}"}),
+        }
+
+    _log.info(
+        "schedule_agent ok request_id=%s reply_chars=%s",
+        req_id,
+        len(result.get("reply") or "") if isinstance(result, dict) else 0,
+    )
     return {
         "statusCode": 200,
-        "body": json.dumps(result),
+        "body": body_json,
     }
