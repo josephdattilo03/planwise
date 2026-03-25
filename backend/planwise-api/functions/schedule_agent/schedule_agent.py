@@ -10,19 +10,11 @@ from typing import Any
 from aws_lambda_typing import context as lambda_context
 from aws_lambda_typing import events as lambda_events
 from aws_lambda_typing.responses import APIGatewayProxyResponseV2
-from openai import OpenAI
 
-from shared.prompts.schedule_agent_prompt import build_schedule_agent_system_prompt
-from shared.services.schedule_agent_context import build_schedule_context
-from shared.services.schedule_agent_tools import (
-    SCHEDULE_AGENT_TOOLS,
-    WRITE_TOOL_NAMES,
-    execute_tool,
-)
+from shared.services.schedule_agent_core import run_schedule_agent_llm
+from shared.services.schedule_agent_tools import WRITE_TOOL_NAMES, execute_tool
 from shared.utils.errors import BadRequestError
 from shared.utils.lambda_error_wrapper import lambda_http_handler
-
-MAX_TOOL_ROUNDS = 10
 
 
 def _handle_execute_plan(
@@ -92,83 +84,17 @@ def lambda_handler(
 
     board_ids = body.get("board_ids")  # optional list of board ids to scope context
 
-    context_data = build_schedule_context(user_id, board_ids)
-    context_json = json.dumps(context_data, indent=2)
-    system_prompt = build_schedule_agent_system_prompt(
-        context_json, timezone="UTC", plan_only=plan_only
-    )
-
-    client = OpenAI(api_key=api_key)
-    messages: list[dict[str, str | list[dict]]] = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": message},
-    ]
-
-    proposed_actions: list[dict[str, Any]] = []
-    final_content = ""
-
-    for _ in range(MAX_TOOL_ROUNDS):
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            tools=SCHEDULE_AGENT_TOOLS,
-            tool_choice="auto",
+    try:
+        result = run_schedule_agent_llm(
+            user_id, message, plan_only=plan_only, board_ids=board_ids
         )
-        choice = response.choices[0]
-        msg = choice.message
-        if not msg.content and not (getattr(msg, "tool_calls") and msg.tool_calls):
-            break
-
-        if msg.tool_calls:
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": msg.content or "",
-                    "tool_calls": [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.function.name,
-                                "arguments": tc.function.arguments,
-                            },
-                        }
-                        for tc in msg.tool_calls
-                    ],
-                }
-            )
-            for tc in msg.tool_calls:
-                name = tc.function.name
-                try:
-                    args = json.loads(tc.function.arguments)
-                except json.JSONDecodeError:
-                    args = {}
-                if plan_only and name in WRITE_TOOL_NAMES:
-                    proposed_actions.append({"tool": name, "arguments": args})
-                    result = "Recorded for confirmation. No changes applied yet."
-                else:
-                    result = execute_tool(name, args, user_id)
-                messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "content": result,
-                    }
-                )
-            continue
-
-        final_content = (msg.content or "").strip()
-        break
-
-    if plan_only:
+    except RuntimeError:
         return {
-            "statusCode": 200,
-            "body": json.dumps({
-                "reply": final_content,
-                "proposed_actions": proposed_actions,
-            }),
+            "statusCode": 500,
+            "body": json.dumps({"error": "OPENAI_API_KEY not configured"}),
         }
+
     return {
         "statusCode": 200,
-        "body": json.dumps({"reply": final_content}),
+        "body": json.dumps(result),
     }
