@@ -1,4 +1,4 @@
-.PHONY: start-local start-dynamodb create-tables build-sam start-api stop clean health-check
+.PHONY: start-local start-dynamodb create-tables build-sam start-api start-api-eager start-api-debug stop clean health-check
 
 AWS_ENDPOINT=http://localhost:8000
 AWS_REGION=us-east-1
@@ -46,6 +46,18 @@ create-tables:
 		--endpoint-url $(AWS_ENDPOINT) \
 		--region $(AWS_REGION) \
 		2>/dev/null || echo "Table 'event-table' already exists"
+	@$(DUMMY_CREDS) aws dynamodb create-table \
+		--table-name user-table \
+		--attribute-definitions \
+			AttributeName=PK,AttributeType=S \
+			AttributeName=SK,AttributeType=S \
+		--key-schema \
+			AttributeName=PK,KeyType=HASH \
+			AttributeName=SK,KeyType=RANGE \
+		--billing-mode PAY_PER_REQUEST \
+		--endpoint-url $(AWS_ENDPOINT) \
+		--region $(AWS_REGION) \
+		2>/dev/null || echo "Table 'user-table' already exists"
 	@$(DUMMY_CREDS) aws dynamodb create-table \
 		--table-name folder-table \
 		--attribute-definitions \
@@ -131,6 +143,10 @@ build-sam:
 # ------------------------
 # SAM Local API
 # ------------------------
+# LAZY: API listens immediately; each Lambda spins up on first request. Avoids EAGER startup where Docker
+# builds many layer-backed images at once; that triggers file watchers on DependenciesLayer and can stall macOS.
+# Use start-api-eager when you need every function container warm before the first HTTP call.
+#
 start-api:
 	@echo "Starting SAM Local API..."
 	@if [ ! -d ".aws-sam/build" ]; then \

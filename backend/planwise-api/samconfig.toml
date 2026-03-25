@@ -23,8 +23,10 @@ resolve_s3 = true
 [default.sync.parameters]
 watch = true
 
+# LAZY: API is ready quickly; each function container starts on first request (avoids macOS watcher/Docker
+# layer-build storms with many functions). EAGER: all containers at startup (slow; use make start-api-eager).
 [default.local_start_api.parameters]
-warm_containers = "EAGER"
+warm_containers = "LAZY"
 
 [default.local_start_lambda.parameters]
-warm_containers = "EAGER"
+warm_containers = "LAZY"

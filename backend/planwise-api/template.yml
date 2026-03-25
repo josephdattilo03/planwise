@@ -10,8 +10,25 @@ Description: >
 Parameters:
   DynamoDBEndpoint:
     Type: String
-    Default: ''
+    Default: 'http://host.docker.internal:8000'
     Description: 'DynamoDB endpoint URL for local development (leave empty for AWS)'
+  GoogleClientId:
+    Type: String
+    Default: ''
+    Description: 'Google OAuth client ID'
+  GoogleClientSecret:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: 'Google OAuth client secret'
+  GoogleRedirectUri:
+    Type: String
+    Default: 'http://localhost:3001/auth/callback'
+    Description: 'Google OAuth callback URL handled by this API (SAM local default port; must match Google Cloud if using /auth/google)'
+  FrontendAuthSuccessUri:
+    Type: String
+    Default: 'http://localhost:3000/auth/success'
+    Description: 'Frontend URL to redirect to after OAuth success'
   OpenAIApiKey:
     Type: String
     Default: ''
@@ -29,7 +46,7 @@ Globals:
     Timeout: 30
     Environment:
       Variables:
-        AWS_ENDPOINT_URL: !Ref DynamoDBEndpoint
+        DYNAMODB_URL: !Ref DynamoDBEndpoint
   Api:
     Cors:
       AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
@@ -55,7 +72,7 @@ Resources:
         - arm64
       RetentionPolicy: Delete
     Metadata:
-      BuildMethod: makefile
+      BuildMethod: python3.13
       BuildArchitecture: arm64
 
   # --------------------------------------------------------------------------
@@ -181,6 +198,22 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: note-table
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+
+  UserTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: user-table
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: PK
@@ -535,7 +568,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref BoardTable
       Events:
-        DeleteEvent:
+        GetBoardsByUser:
           Type: Api
           Properties:
             Path: /user/{user_id}/board/
@@ -862,6 +895,164 @@ Resources:
           Properties:
             Path: /user/{user_id}/task/
             Method: get
+
+  # --------------------------------------------------------------------------
+  # User Functions
+  # --------------------------------------------------------------------------
+  CreateUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/user/
+      Handler: create_user.lambda_handler
+      Environment:
+        Variables:
+          USER_TABLE: !Ref UserTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserTable
+      Events:
+        CreateUser:
+          Type: Api
+          Properties:
+            Path: /user
+            Method: post
+
+  GetUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/user/
+      Handler: get_user.lambda_handler
+      Environment:
+        Variables:
+          USER_TABLE: !Ref UserTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UserTable
+      Events:
+        GetUser:
+          Type: Api
+          Properties:
+            Path: /user/{id}
+            Method: get
+
+  UpdateUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/user/
+      Handler: update_user.lambda_handler
+      Environment:
+        Variables:
+          USER_TABLE: !Ref UserTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserTable
+      Events:
+        UpdateUser:
+          Type: Api
+          Properties:
+            Path: /user/{id}
+            Method: put
+
+  DeleteUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/user/
+      Handler: delete_user.lambda_handler
+      Environment:
+        Variables:
+          USER_TABLE: !Ref UserTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserTable
+      Events:
+        DeleteUser:
+          Type: Api
+          Properties:
+            Path: /user/{id}
+            Method: delete
+
+  # --------------------------------------------------------------------------
+  # Google OAuth Functions
+  # --------------------------------------------------------------------------
+  GoogleAuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/google_auth/
+      Handler: auth_handler.lambda_handler
+      Environment:
+        Variables:
+          GOOGLE_CLIENT_ID: !Ref GoogleClientId
+          GOOGLE_CLIENT_SECRET: !Ref GoogleClientSecret
+          GOOGLE_REDIRECT_URI: !Ref GoogleRedirectUri
+      Layers:
+        - !Ref DependenciesLayer
+      Events:
+        GoogleAuth:
+          Type: Api
+          Properties:
+            Path: /auth/google
+            Method: get
+
+  GoogleAuthCallbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/google_auth/
+      Handler: callback_handler.lambda_handler
+      Environment:
+        Variables:
+          GOOGLE_CLIENT_ID: !Ref GoogleClientId
+          GOOGLE_CLIENT_SECRET: !Ref GoogleClientSecret
+          GOOGLE_REDIRECT_URI: !Ref GoogleRedirectUri
+          FRONTEND_AUTH_SUCCESS_URI: !Ref FrontendAuthSuccessUri
+          USER_TABLE: !Ref UserTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserTable
+      Events:
+        GoogleAuthCallback:
+          Type: Api
+          Properties:
+            Path: /auth/callback
+            Method: get
+
+  # --------------------------------------------------------------------------
+  # Google Calendar import (server calls Google; Next.js proxies with OAuth tokens)
+  # --------------------------------------------------------------------------
+  ImportGoogleCalendarFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/google_calendar/
+      Handler: import_calendar.lambda_handler
+      Environment:
+        Variables:
+          GOOGLE_CLIENT_ID: !Ref GoogleClientId
+          GOOGLE_CLIENT_SECRET: !Ref GoogleClientSecret
+          USER_TABLE: !Ref UserTable
+          EVENT_TABLE: !Ref EventTable
+      Layers:
+        - !Ref DependenciesLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EventTable
+      Events:
+        ImportGoogleCalendar:
+          Type: Api
+          Properties:
+            Path: /user/{user_id}/import-calendar
+            Method: post
+
 # ============================================================================
 # OUTPUTS
 # ============================================================================
@@ -877,3 +1068,7 @@ Outputs:
   CreateEventFunctionArn:
     Description: 'Create Event Lambda Function ARN'
     Value: !GetAtt CreateEventFunction.Arn
+
+  UserTableName:
+    Description: 'DynamoDB table name for user'
+    Value: !Ref UserTable
